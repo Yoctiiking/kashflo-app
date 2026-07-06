@@ -58,4 +58,12 @@ class TransactionProvider extends ChangeNotifier {
     _subscription?.cancel();
     super.dispose();
   }
+
+  Future<void> deleteTransaction(String uid, String txId) {
+    return _service.deleteTransaction(uid, txId);
+  }
+
+  Future<void> addTransaction(String uid, TransactionModel tx) {
+    return _service.addTransaction(uid, tx);
+  }
 }
