@@ -6,10 +6,25 @@ import '../../models/transaction_model.dart';
 
 // ⚠️ Placeholder — à remplacer par les catégories exactes utilisées sur le web
 const _expenseCategories = [
-  'Alimentation', 'Transport', 'Logement', 'Loisirs',
-  'Santé', 'Abonnements', 'Autre',
+  'Alimentation',
+  'Transport',
+  'Logement',
+  'Santé',
+  'Loisirs',
+  'Vêtements',
+  'Abonnements',
+  'Restaurants',
+  'Éducation',
+  'Autre',
 ];
-const _incomeCategories = ['Salaire', 'Freelance', 'Autre'];
+
+const _incomeCategories = [
+  "Salaire",
+  "Freelance",
+  "Investissements",
+  "Remboursement",
+  "Autre",
+];
 
 class AddTransactionSheet extends StatefulWidget {
   const AddTransactionSheet({super.key});
@@ -71,7 +86,9 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.only(
-        left: 20, right: 20, top: 20,
+        left: 20,
+        right: 20,
+        top: 20,
         bottom: MediaQuery.of(context).viewInsets.bottom + 20,
       ),
       child: Form(
@@ -82,7 +99,8 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
           children: [
             Center(
               child: Container(
-                width: 40, height: 4,
+                width: 40,
+                height: 4,
                 margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade300,
@@ -90,8 +108,10 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                 ),
               ),
             ),
-            Text('Nouvelle transaction',
-                style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              'Nouvelle transaction',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             const SizedBox(height: 16),
             SegmentedButton<String>(
               segments: const [
@@ -118,7 +138,9 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
             const SizedBox(height: 16),
             TextFormField(
               controller: _amountController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               decoration: const InputDecoration(
                 labelText: 'Montant',
                 prefixText: '\$ ',
@@ -134,8 +156,9 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
             TextFormField(
               controller: _descriptionController,
               decoration: const InputDecoration(labelText: 'Description'),
-              validator: (value) =>
-              (value == null || value.isEmpty) ? 'Description requise' : null,
+              validator: (value) => (value == null || value.isEmpty)
+                  ? 'Description requise'
+                  : null,
             ),
             const SizedBox(height: 16),
             InkWell(
@@ -153,9 +176,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                   labelText: 'Date',
                   prefixIcon: Icon(Icons.calendar_today_outlined),
                 ),
-                child: Text(
-                  '${_date.day}/${_date.month}/${_date.year}',
-                ),
+                child: Text('${_date.day}/${_date.month}/${_date.year}'),
               ),
             ),
             const SizedBox(height: 24),
@@ -166,9 +187,10 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
               ),
               child: _isSaving
                   ? const SizedBox(
-                height: 20, width: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
                   : const Text('Ajouter'),
             ),
           ],

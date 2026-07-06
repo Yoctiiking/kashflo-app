@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:kashflo_mobile/providers/budget_provider.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'providers/auth_provider.dart';
@@ -24,6 +25,11 @@ class KashFloApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProxyProvider<AuthProvider, TransactionProvider>(
           create: (_) => TransactionProvider(),
+          update: (_, auth, previous) =>
+          previous!..updateUser(auth.user?.uid),
+        ),
+        ChangeNotifierProxyProvider<AuthProvider, BudgetProvider>(
+          create: (_) => BudgetProvider(),
           update: (_, auth, previous) =>
           previous!..updateUser(auth.user?.uid),
         ),

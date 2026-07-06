@@ -66,4 +66,8 @@ class TransactionProvider extends ChangeNotifier {
   Future<void> addTransaction(String uid, TransactionModel tx) {
     return _service.addTransaction(uid, tx);
   }
+
+  /// Toutes les transactions chargées, sans filtre de mois
+  /// (nécessaire pour le calcul des budgets jour/semaine/mois)
+  List<TransactionModel> get allTransactions => _transactions;
 }

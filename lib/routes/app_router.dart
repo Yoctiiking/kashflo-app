@@ -1,11 +1,13 @@
 import 'dart:async';
-
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
 import '../screens/dashboard/dashboard_screen.dart';
+import '../screens/transactions/transactions_screen.dart';
+import '../screens/budgets/budgets_screen.dart';
+import '../screens/shell/main_shell.dart';
 
 class AppRouter {
   static final router = GoRouter(
@@ -23,12 +25,31 @@ class AppRouter {
     routes: [
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(path: '/register', builder: (context, state) => const RegisterScreen()),
-      GoRoute(path: '/dashboard', builder: (context, state) => const DashboardScreen()),
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) =>
+            MainShell(navigationShell: navigationShell),
+        branches: [
+          StatefulShellBranch(
+            routes: [
+              GoRoute(path: '/dashboard', builder: (context, state) => const DashboardScreen()),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(path: '/transactions', builder: (context, state) => const TransactionsScreen()),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(path: '/budgets', builder: (context, state) => const BudgetsScreen()),
+            ],
+          ),
+        ],
+      ),
     ],
   );
 }
 
-// Petite classe utilitaire pour convertir un Stream en Listenable
 class GoRouterRefreshStream extends ChangeNotifier {
   late final StreamSubscription _subscription;
 
