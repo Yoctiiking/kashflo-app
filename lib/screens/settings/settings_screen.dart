@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/user_profile_provider.dart';
-import '../../providers/currency_provider.dart';
 
 const _currencies = {
   'CAD': 'Dollar canadien (CAD)',

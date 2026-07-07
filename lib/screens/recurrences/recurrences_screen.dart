@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/currency_provider.dart';
 import '../../providers/recurrence_provider.dart';
 import '../../models/recurrence_model.dart';
 import 'add_recurrence_sheet.dart';
@@ -46,8 +47,6 @@ class _RecurrencesScreenState extends State<RecurrencesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Récurrences'),
@@ -94,7 +93,6 @@ class _RecurrencesScreenState extends State<RecurrencesScreen> {
               final recurrence = provider.recurrences[index];
               return _RecurrenceCard(
                 recurrence: recurrence,
-                currencyFormat: currencyFormat,
                 onToggle: () {
                   final uid = context.read<AuthProvider>().user!.uid;
                   context.read<RecurrenceProvider>().toggleRecurrence(uid, recurrence);
@@ -125,19 +123,18 @@ class _RecurrencesScreenState extends State<RecurrencesScreen> {
 
 class _RecurrenceCard extends StatelessWidget {
   final RecurrenceModel recurrence;
-  final NumberFormat currencyFormat;
   final VoidCallback onToggle;
   final VoidCallback onDelete;
 
   const _RecurrenceCard({
     required this.recurrence,
-    required this.currencyFormat,
     required this.onToggle,
     required this.onDelete,
   });
 
   @override
   Widget build(BuildContext context) {
+    final currency = context.watch<CurrencyProvider>();
     final isExpense = recurrence.type == 'expense';
     final dateText = DateFormat('dd/MM/yyyy').format(recurrence.nextOccurrence);
     return Card(
@@ -155,7 +152,7 @@ class _RecurrenceCard extends StatelessWidget {
         ),
         title: Text(recurrence.label),
         subtitle: Text(
-          '${currencyFormat.format(recurrence.amount)} · ${_frequencyLabels[recurrence.frequency]} · Prochaine: $dateText',
+          '${currency.formatCurrency(recurrence.amount)} · ${_frequencyLabels[recurrence.frequency]} · Prochaine: $dateText',
         ),
         isThreeLine: true,
         trailing: Row(

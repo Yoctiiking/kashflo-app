@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import '../../providers/auth_provider.dart';
 import '../../providers/currency_provider.dart';
 import '../../providers/transaction_provider.dart';
 import '../../models/transaction_model.dart';
@@ -43,6 +42,7 @@ class DashboardScreen extends StatelessWidget {
               children: [
                 Text(
                   monthLabel[0].toUpperCase() + monthLabel.substring(1),
+                  textAlign: TextAlign.center,
                   style: Theme.of(
                     context,
                   ).textTheme.titleMedium?.copyWith(color: Colors.grey),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/currency_provider.dart';
 import '../../providers/recurrence_provider.dart';
 import '../../models/recurrence_model.dart';
 
@@ -61,11 +62,13 @@ class _AddRecurrenceSheetState extends State<AddRecurrenceSheet> {
     setState(() => _isSaving = true);
 
     final uid = context.read<AuthProvider>().user!.uid;
+    final currency = context.read<CurrencyProvider>();
+    final enteredAmount = double.parse(_amountController.text.replaceAll(',', '.'));
     final recurrence = RecurrenceModel(
       id: '',
       type: _type,
       category: _category!,
-      amount: double.parse(_amountController.text.replaceAll(',', '.')),
+      amount: currency.toBase(enteredAmount),
       label: _labelController.text.trim(),
       frequency: _frequency,
       customDays: _frequency == 'custom'
@@ -84,6 +87,7 @@ class _AddRecurrenceSheetState extends State<AddRecurrenceSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final currency = context.watch<CurrencyProvider>();
     return Padding(
       padding: EdgeInsets.only(
         left: 20, right: 20, top: 20,
@@ -131,7 +135,7 @@ class _AddRecurrenceSheetState extends State<AddRecurrenceSheet> {
             TextFormField(
               controller: _amountController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(labelText: 'Montant', prefixText: '\$ '),
+              decoration: InputDecoration(labelText: 'Montant', prefixText: '${currency.symbol} '),
               validator: (value) {
                 if (value == null || value.isEmpty) return 'Montant requis';
                 final parsed = double.tryParse(value.replaceAll(',', '.'));

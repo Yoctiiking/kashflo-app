@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/currency_provider.dart';
 import '../../providers/transaction_provider.dart';
 import '../../models/transaction_model.dart';
 import 'add_transaction_sheet.dart';
@@ -20,8 +21,6 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
-
     return Scaffold(
       appBar: AppBar(title: const Text('Transactions')),
       body: Consumer<TransactionProvider>(
@@ -46,6 +45,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
                 child: SegmentedButton<TransactionFilter>(
+                  showSelectedIcon: false,
                   segments: const [
                     ButtonSegment(value: TransactionFilter.all, label: Text('Tout')),
                     ButtonSegment(value: TransactionFilter.expense, label: Text('Dépenses')),
@@ -91,7 +91,6 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                       },
                       child: _TransactionCard(
                         transaction: tx,
-                        currencyFormat: currencyFormat,
                       ),
                     );
                   },
@@ -139,18 +138,17 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
 
 class _TransactionCard extends StatelessWidget {
   final TransactionModel transaction;
-  final NumberFormat currencyFormat;
 
   const _TransactionCard({
     required this.transaction,
-    required this.currencyFormat,
   });
 
   @override
   Widget build(BuildContext context) {
+    final currency = context.watch<CurrencyProvider>();
     final isExpense = transaction.type == 'expense';
     final amountText =
-        '${isExpense ? '-' : '+'}${currencyFormat.format(transaction.amount)}';
+        '${isExpense ? '-' : '+'}${currency.formatCurrency(transaction.amount)}';
     final dateText = DateFormat('dd/MM/yyyy').format(transaction.date);
 
     return Card(

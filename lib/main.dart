@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:kashflo_mobile/providers/shared_budget_detail_provider.dart';
+import 'package:kashflo_mobile/providers/shared_budgets_provider.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'providers/auth_provider.dart';
@@ -45,6 +47,11 @@ class KashFloApp extends StatelessWidget {
           create: (_) => UserProfileProvider(),
           update: (_, auth, previous) => previous!..updateUser(auth.user?.uid),
         ),
+        ChangeNotifierProxyProvider<AuthProvider, SharedBudgetsProvider>(
+          create: (_) => SharedBudgetsProvider(),
+          update: (_, auth, previous) => previous!..updateUser(auth.user?.uid),
+        ),
+        ChangeNotifierProvider(create: (_) => SharedBudgetDetailProvider()),
 
         // 3. CurrencyProvider — doit venir APRÈS UserProfileProvider,
         //    car il dépend de AuthProvider ET UserProfileProvider

@@ -67,19 +67,18 @@ class BudgetProvider extends ChangeNotifier {
     final now = DateTime.now();
 
     switch (period) {
-      case 'day':
+      case 'daily':
         final start = DateTime(now.year, now.month, now.day);
         final end = start.add(const Duration(days: 1));
         return (start: start, end: end);
 
-      case 'week':
-      // Semaine ISO : lundi -> dimanche
+      case 'weekly':
         final today = DateTime(now.year, now.month, now.day);
         final start = today.subtract(Duration(days: today.weekday - 1));
         final end = start.add(const Duration(days: 7));
         return (start: start, end: end);
 
-      case 'month':
+      case 'monthly':
       default:
         final start = DateTime(now.year, now.month, 1);
         final end = DateTime(now.year, now.month + 1, 1);

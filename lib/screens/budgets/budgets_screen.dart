@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/budget_provider.dart';
+import '../../providers/currency_provider.dart';
 import '../../providers/transaction_provider.dart';
 import '../../models/budget_model.dart';
 import 'add_budget_sheet.dart';
@@ -12,10 +13,17 @@ class BudgetsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
-
     return Scaffold(
-      appBar: AppBar(title: const Text('Budgets')),
+      appBar: AppBar(
+        title: const Text('Budgets'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.group_outlined),
+            tooltip: 'Budgets partagés',
+            onPressed: () => context.push('/shared-budgets'),
+          ),
+        ],
+      ),
       body: Consumer2<BudgetProvider, TransactionProvider>(
         builder: (context, budgetProvider, txProvider, _) {
           if (budgetProvider.isLoading) {
@@ -43,7 +51,6 @@ class BudgetsScreen extends StatelessWidget {
               return _BudgetCard(
                 budget: budget,
                 spent: spent,
-                currencyFormat: currencyFormat,
                 onDelete: () {
                   final uid = context.read<AuthProvider>().user!.uid;
                   context.read<BudgetProvider>().deleteBudget(uid, budget.id);
@@ -71,23 +78,21 @@ class BudgetsScreen extends StatelessWidget {
 class _BudgetCard extends StatelessWidget {
   final BudgetModel budget;
   final double spent;
-  final NumberFormat currencyFormat;
   final VoidCallback onDelete;
 
   const _BudgetCard({
     required this.budget,
     required this.spent,
-    required this.currencyFormat,
     required this.onDelete,
   });
 
   String get _periodLabel {
     switch (budget.period) {
-      case 'day':
+      case 'daily':
         return '/ jour';
-      case 'week':
+      case 'weekly':
         return '/ semaine';
-      case 'month':
+      case 'monthly':
       default:
         return '/ mois';
     }
@@ -95,7 +100,10 @@ class _BudgetCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final progress = budget.limit > 0 ? (spent / budget.limit).clamp(0.0, 1.0) : 0.0;
+    final currency = context.watch<CurrencyProvider>();
+    final progress = budget.limit > 0
+        ? (spent / budget.limit).clamp(0.0, 1.0)
+        : 0.0;
     final isOverBudget = spent > budget.limit;
     final overAmount = spent - budget.limit;
 
@@ -110,11 +118,24 @@ class _BudgetCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
-                  child: Text(
-                    budget.category,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Text(
+                        budget.category,
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        _periodLabel,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 IconButton(
@@ -125,9 +146,20 @@ class _BudgetCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 4),
-            Text(
-              '${currencyFormat.format(spent)} / ${currencyFormat.format(budget.limit)} $_periodLabel',
-              style: TextStyle(color: Colors.grey.shade700),
+            Text.rich(
+              TextSpan(
+                style: TextStyle(color: Colors.grey.shade700, fontSize: 14),
+                children: [
+                  TextSpan(
+                    text: currency.formatCurrency(spent),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: isOverBudget ? Colors.red : Colors.black87,
+                    ),
+                  ),
+                  TextSpan(text: ' / ${currency.formatCurrency(budget.limit)}'),
+                ],
+              ),
             ),
             const SizedBox(height: 8),
             ClipRRect(
@@ -144,7 +176,7 @@ class _BudgetCard extends StatelessWidget {
             if (isOverBudget) ...[
               const SizedBox(height: 6),
               Text(
-                'Dépassé de ${currencyFormat.format(overAmount)}',
+                'Dépassé de ${currency.formatCurrency(overAmount)}',
                 style: const TextStyle(
                   color: Colors.red,
                   fontWeight: FontWeight.w600,

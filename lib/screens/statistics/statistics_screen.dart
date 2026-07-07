@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../../providers/currency_provider.dart';
 import '../../providers/transaction_provider.dart';
 
 const _categoryColors = [
@@ -16,7 +17,7 @@ class StatisticsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
+    final currency = context.watch<CurrencyProvider>();
 
     return Scaffold(
       appBar: AppBar(title: const Text('Statistiques')),
@@ -52,7 +53,7 @@ class StatisticsScreen extends StatelessWidget {
                 height: 240,
                 child: _MonthlyBarChart(
                   data: txProvider.last6MonthsTotals,
-                  currencyFormat: currencyFormat,
+                  currency: currency,
                 ),
               ),
               const SizedBox(height: 32),
@@ -76,7 +77,7 @@ class StatisticsScreen extends StatelessWidget {
               else
                 _CategoryPieChart(
                   data: txProvider.categoryBreakdown,
-                  currencyFormat: currencyFormat,
+                  currency: currency,
                 ),
             ],
           );
@@ -88,9 +89,9 @@ class StatisticsScreen extends StatelessWidget {
 
 class _MonthlyBarChart extends StatelessWidget {
   final List data;
-  final NumberFormat currencyFormat;
+  final CurrencyProvider currency;
 
-  const _MonthlyBarChart({required this.data, required this.currencyFormat});
+  const _MonthlyBarChart({required this.data, required this.currency});
 
   @override
   Widget build(BuildContext context) {
@@ -106,7 +107,7 @@ class _MonthlyBarChart extends StatelessWidget {
           touchTooltipData: BarTouchTooltipData(
             getTooltipItem: (group, groupIndex, rod, rodIndex) {
               return BarTooltipItem(
-                currencyFormat.format(rod.toY),
+                currency.formatCurrency(rod.toY),
                 const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
               );
             },
@@ -155,9 +156,9 @@ class _MonthlyBarChart extends StatelessWidget {
 
 class _CategoryPieChart extends StatelessWidget {
   final Map<String, double> data;
-  final NumberFormat currencyFormat;
+  final CurrencyProvider currency;
 
-  const _CategoryPieChart({required this.data, required this.currencyFormat});
+  const _CategoryPieChart({required this.data, required this.currency});
 
   @override
   Widget build(BuildContext context) {
@@ -206,7 +207,7 @@ class _CategoryPieChart extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(child: Text(entry.key)),
                 Text(
-                  currencyFormat.format(entry.value),
+                  currency.formatCurrency(entry.value),
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
               ],

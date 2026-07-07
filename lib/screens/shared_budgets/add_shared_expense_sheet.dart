@@ -2,69 +2,49 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/currency_provider.dart';
-import '../../providers/transaction_provider.dart';
-import '../../models/transaction_model.dart';
+import '../../providers/shared_budget_detail_provider.dart';
 
-const _expenseCategories = [
-  'Alimentation', 'Transport', 'Logement', 'Santé', 'Loisirs',
-  'Vêtements', 'Abonnements', 'Restaurants', 'Éducation', 'Autre',
-];
-const _incomeCategories = ['Salaire', 'Freelance', 'Investissements', 'Remboursement', 'Autre'];
-
-class AddTransactionSheet extends StatefulWidget {
-  const AddTransactionSheet({super.key});
+class AddSharedExpenseSheet extends StatefulWidget {
+  final String budgetId;
+  const AddSharedExpenseSheet({super.key, required this.budgetId});
 
   @override
-  State<AddTransactionSheet> createState() => _AddTransactionSheetState();
+  State<AddSharedExpenseSheet> createState() => _AddSharedExpenseSheetState();
 }
 
-class _AddTransactionSheetState extends State<AddTransactionSheet> {
+class _AddSharedExpenseSheetState extends State<AddSharedExpenseSheet> {
   final _formKey = GlobalKey<FormState>();
+  final _labelController = TextEditingController();
   final _amountController = TextEditingController();
-  final _labelController = TextEditingController(); // renommé depuis _descriptionController
-
-  String _type = 'expense';
-  String? _category;
   DateTime _date = DateTime.now();
   bool _isSaving = false;
 
   @override
   void dispose() {
-    _amountController.dispose();
     _labelController.dispose();
+    _amountController.dispose();
     super.dispose();
   }
 
-  List<String> get _categories =>
-      _type == 'expense' ? _expenseCategories : _incomeCategories;
-
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate() || _category == null) {
-      if (_category == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Sélectionne une catégorie')),
-        );
-      }
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isSaving = true);
 
-    final uid = context.read<AuthProvider>().user!.uid;
+    final authProvider = context.read<AuthProvider>();
     final currency = context.read<CurrencyProvider>();
+    final uid = authProvider.user!.uid;
+    final displayName = authProvider.user!.displayName ?? 'Utilisateur';
+
     final enteredAmount = double.parse(_amountController.text.replaceAll(',', '.'));
-    final tx = TransactionModel(
-      id: '',
-      type: _type,
-      category: _category!,
+
+    await context.read<SharedBudgetDetailProvider>().addExpense(
       amount: currency.toBase(enteredAmount),
       label: _labelController.text.trim(),
       date: _date,
       addedBy: uid,
-      createdAt: DateTime.now(),
+      addedByName: displayName,
     );
-
-    await context.read<TransactionProvider>().addTransaction(uid, tx);
 
     if (!mounted) return;
     Navigator.pop(context);
@@ -72,7 +52,6 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final currency = context.watch<CurrencyProvider>();
     return Padding(
       padding: EdgeInsets.only(
         left: 20, right: 20, top: 20,
@@ -94,45 +73,25 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                 ),
               ),
             ),
-            Text('Nouvelle transaction', style: Theme.of(context).textTheme.titleLarge),
+            Text('Nouvelle dépense', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 16),
-            SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'expense', label: Text('Dépense')),
-                ButtonSegment(value: 'income', label: Text('Revenu')),
-              ],
-              selected: {_type},
-              onSelectionChanged: (selection) {
-                setState(() {
-                  _type = selection.first;
-                  _category = null;
-                });
-              },
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              initialValue: _category,
-              decoration: const InputDecoration(labelText: 'Catégorie'),
-              items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-              onChanged: (value) => setState(() => _category = value),
+            TextFormField(
+              controller: _labelController,
+              decoration: const InputDecoration(labelText: 'Description'),
+              validator: (value) =>
+              (value == null || value.isEmpty) ? 'Description requise' : null,
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _amountController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: InputDecoration(labelText: 'Montant', prefixText: '${currency.symbol} '),
+              decoration: const InputDecoration(labelText: 'Montant', prefixText: '\$ '),
               validator: (value) {
                 if (value == null || value.isEmpty) return 'Montant requis';
                 final parsed = double.tryParse(value.replaceAll(',', '.'));
                 if (parsed == null || parsed <= 0) return 'Montant invalide';
                 return null;
               },
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _labelController,
-              decoration: const InputDecoration(labelText: 'Description'),
-              validator: (value) => (value == null || value.isEmpty) ? 'Description requise' : null,
             ),
             const SizedBox(height: 16),
             InkWell(
