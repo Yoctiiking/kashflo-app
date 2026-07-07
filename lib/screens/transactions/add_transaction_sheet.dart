@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/currency_provider.dart';
 import '../../providers/transaction_provider.dart';
 import '../../models/transaction_model.dart';
 
@@ -50,11 +51,13 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
     setState(() => _isSaving = true);
 
     final uid = context.read<AuthProvider>().user!.uid;
+    final currency = context.read<CurrencyProvider>();
+    final enteredAmount = double.parse(_amountController.text.replaceAll(',', '.'));
     final tx = TransactionModel(
       id: '',
       type: _type,
       category: _category!,
-      amount: double.parse(_amountController.text.replaceAll(',', '.')),
+      amount: currency.toBase(enteredAmount),
       label: _labelController.text.trim(),
       date: _date,
       addedBy: uid,

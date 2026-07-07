@@ -6,6 +6,7 @@ import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
 import '../screens/dashboard/dashboard_screen.dart';
 import '../screens/recurrences/recurrences_screen.dart';
+import '../screens/settings/settings_screen.dart';
 import '../screens/statistics/statistics_screen.dart';
 import '../screens/transactions/transactions_screen.dart';
 import '../screens/budgets/budgets_screen.dart';
@@ -29,6 +30,7 @@ class AppRouter {
       GoRoute(path: '/register', builder: (context, state) => const RegisterScreen()),
       GoRoute(path: '/statistics', builder: (context, state) => const StatisticsScreen()),
       GoRoute(path: '/recurrences', builder: (context, state) => const RecurrencesScreen()),
+      GoRoute(path: '/settings', builder: (context, state) => const SettingsScreen()),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
             MainShell(navigationShell: navigationShell),

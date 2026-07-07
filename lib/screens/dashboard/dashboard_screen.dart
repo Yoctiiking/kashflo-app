@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/currency_provider.dart';
 import '../../providers/transaction_provider.dart';
 import '../../models/transaction_model.dart';
 
@@ -11,7 +12,7 @@ class DashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
+    final currency = context.watch<CurrencyProvider>();
     final monthLabel = DateFormat.yMMMM('fr_FR').format(DateTime.now());
 
     return Scaffold(
@@ -19,8 +20,8 @@ class DashboardScreen extends StatelessWidget {
         title: const Text('KashFlo'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => context.read<AuthProvider>().logout(),
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () => context.push('/settings'),
           ),
         ],
       ),
@@ -42,9 +43,9 @@ class DashboardScreen extends StatelessWidget {
               children: [
                 Text(
                   monthLabel[0].toUpperCase() + monthLabel.substring(1),
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Colors.grey,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleMedium?.copyWith(color: Colors.grey),
                 ),
                 const SizedBox(height: 8),
                 Card(
@@ -56,8 +57,9 @@ class DashboardScreen extends StatelessWidget {
                         const Text('Solde'),
                         const SizedBox(height: 4),
                         Text(
-                          currencyFormat.format(balance),
-                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                          currency.formatCurrency(balance),
+                          style: Theme.of(context).textTheme.headlineMedium
+                              ?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: isNegative ? Colors.red : Colors.green,
                           ),
@@ -106,10 +108,7 @@ class DashboardScreen extends StatelessWidget {
                   )
                 else
                   ...txProvider.recentTransactions.map(
-                        (tx) => _TransactionTile(
-                      transaction: tx,
-                      currencyFormat: currencyFormat,
-                    ),
+                        (tx) => _TransactionTile(transaction: tx),
                   ),
               ],
             ),
@@ -154,18 +153,15 @@ class _ShortcutCard extends StatelessWidget {
 
 class _TransactionTile extends StatelessWidget {
   final TransactionModel transaction;
-  final NumberFormat currencyFormat;
 
-  const _TransactionTile({
-    required this.transaction,
-    required this.currencyFormat,
-  });
+  const _TransactionTile({required this.transaction});
 
   @override
   Widget build(BuildContext context) {
+    final currency = context.watch<CurrencyProvider>();
     final isExpense = transaction.type == 'expense';
     final amountText =
-        '${isExpense ? '-' : '+'}${currencyFormat.format(transaction.amount)}';
+        '${isExpense ? '-' : '+'}${currency.formatCurrency(transaction.amount)}';
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),

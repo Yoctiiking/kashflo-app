@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/recurrence_model.dart';
 import '../models/transaction_model.dart';
 import '../models/budget_model.dart';
+import '../models/user_profile_model.dart';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -86,5 +87,26 @@ class FirestoreService {
     return _recurrencesRef(uid).doc(recurrenceId).update({
       'nextOccurrence': Timestamp.fromDate(nextOccurrence),
     });
+  }
+
+  // User profile
+  Future<UserProfileModel?> getUserProfile(String uid) async {
+    final doc = await _db.collection('users').doc(uid).get();
+    if (!doc.exists) return null;
+    return UserProfileModel.fromFirestore(doc);
+  }
+
+  Stream<UserProfileModel?> watchUserProfile(String uid) {
+    return _db.collection('users').doc(uid).snapshots().map(
+          (doc) => doc.exists ? UserProfileModel.fromFirestore(doc) : null,
+    );
+  }
+
+  Future<void> updateDisplayName(String uid, String displayName) {
+    return _db.collection('users').doc(uid).update({'displayName': displayName});
+  }
+
+  Future<void> updateUserCurrency(String uid, String currency) {
+    return _db.collection('users').doc(uid).update({'currency': currency});
   }
 }
