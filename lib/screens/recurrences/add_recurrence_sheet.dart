@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
-import '../../providers/transaction_provider.dart';
-import '../../models/transaction_model.dart';
+import '../../providers/recurrence_provider.dart';
+import '../../models/recurrence_model.dart';
 
 const _expenseCategories = [
   'Alimentation', 'Transport', 'Logement', 'Santé', 'Loisirs',
@@ -10,27 +10,38 @@ const _expenseCategories = [
 ];
 const _incomeCategories = ['Salaire', 'Freelance', 'Investissements', 'Remboursement', 'Autre'];
 
-class AddTransactionSheet extends StatefulWidget {
-  const AddTransactionSheet({super.key});
+const _frequencies = {
+  'daily': 'Quotidien',
+  'weekly': 'Hebdomadaire',
+  'monthly': 'Mensuel',
+  'yearly': 'Annuel',
+  'custom': 'Personnalisé',
+};
+
+class AddRecurrenceSheet extends StatefulWidget {
+  const AddRecurrenceSheet({super.key});
 
   @override
-  State<AddTransactionSheet> createState() => _AddTransactionSheetState();
+  State<AddRecurrenceSheet> createState() => _AddRecurrenceSheetState();
 }
 
-class _AddTransactionSheetState extends State<AddTransactionSheet> {
+class _AddRecurrenceSheetState extends State<AddRecurrenceSheet> {
   final _formKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
-  final _labelController = TextEditingController(); // renommé depuis _descriptionController
+  final _labelController = TextEditingController();
+  final _customDaysController = TextEditingController();
 
   String _type = 'expense';
   String? _category;
-  DateTime _date = DateTime.now();
+  String _frequency = 'monthly';
+  DateTime _nextOccurrence = DateTime.now();
   bool _isSaving = false;
 
   @override
   void dispose() {
     _amountController.dispose();
     _labelController.dispose();
+    _customDaysController.dispose();
     super.dispose();
   }
 
@@ -50,18 +61,22 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
     setState(() => _isSaving = true);
 
     final uid = context.read<AuthProvider>().user!.uid;
-    final tx = TransactionModel(
+    final recurrence = RecurrenceModel(
       id: '',
       type: _type,
       category: _category!,
       amount: double.parse(_amountController.text.replaceAll(',', '.')),
       label: _labelController.text.trim(),
-      date: _date,
-      addedBy: uid,
+      frequency: _frequency,
+      customDays: _frequency == 'custom'
+          ? int.tryParse(_customDaysController.text)
+          : null,
+      nextOccurrence: _nextOccurrence,
+      isActive: true,
       createdAt: DateTime.now(),
     );
 
-    await context.read<TransactionProvider>().addTransaction(uid, tx);
+    await context.read<RecurrenceProvider>().addRecurrence(uid, recurrence);
 
     if (!mounted) return;
     Navigator.pop(context);
@@ -90,7 +105,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                 ),
               ),
             ),
-            Text('Nouvelle transaction', style: Theme.of(context).textTheme.titleLarge),
+            Text('Nouvelle récurrence', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 16),
             SegmentedButton<String>(
               segments: const [
@@ -127,23 +142,50 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
             const SizedBox(height: 16),
             TextFormField(
               controller: _labelController,
-              decoration: const InputDecoration(labelText: 'Description'),
+              decoration: const InputDecoration(labelText: 'Description (ex: Spotify)'),
               validator: (value) => (value == null || value.isEmpty) ? 'Description requise' : null,
             ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              initialValue: _frequency,
+              decoration: const InputDecoration(labelText: 'Fréquence'),
+              items: _frequencies.entries
+                  .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
+                  .toList(),
+              onChanged: (value) => setState(() => _frequency = value!),
+            ),
+            if (_frequency == 'custom') ...[
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _customDaysController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Tous les combien de jours ?',
+                  suffixText: 'jours',
+                ),
+                validator: (value) {
+                  if (_frequency != 'custom') return null;
+                  if (value == null || value.isEmpty) return 'Nombre de jours requis';
+                  final parsed = int.tryParse(value);
+                  if (parsed == null || parsed <= 0) return 'Valeur invalide';
+                  return null;
+                },
+              ),
+            ],
             const SizedBox(height: 16),
             InkWell(
               onTap: () async {
                 final picked = await showDatePicker(
-                  context: context, initialDate: _date,
-                  firstDate: DateTime(2020), lastDate: DateTime.now(),
+                  context: context, initialDate: _nextOccurrence,
+                  firstDate: DateTime.now(), lastDate: DateTime(2100),
                 );
-                if (picked != null) setState(() => _date = picked);
+                if (picked != null) setState(() => _nextOccurrence = picked);
               },
               child: InputDecorator(
                 decoration: const InputDecoration(
-                  labelText: 'Date', prefixIcon: Icon(Icons.calendar_today_outlined),
+                  labelText: 'Prochaine date', prefixIcon: Icon(Icons.calendar_today_outlined),
                 ),
-                child: Text('${_date.day}/${_date.month}/${_date.year}'),
+                child: Text('${_nextOccurrence.day}/${_nextOccurrence.month}/${_nextOccurrence.year}'),
               ),
             ),
             const SizedBox(height: 24),
@@ -152,7 +194,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
               style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
               child: _isSaving
                   ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Text('Ajouter'),
+                  : const Text('Créer la récurrence'),
             ),
           ],
         ),

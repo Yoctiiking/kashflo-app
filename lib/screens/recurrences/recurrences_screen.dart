@@ -1,0 +1,178 @@
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/recurrence_provider.dart';
+import '../../models/recurrence_model.dart';
+import 'add_recurrence_sheet.dart';
+
+const _frequencyLabels = {
+  'daily': 'Quotidien',
+  'weekly': 'Hebdomadaire',
+  'monthly': 'Mensuel',
+  'yearly': 'Annuel',
+  'custom': 'Personnalisé',
+};
+
+class RecurrencesScreen extends StatefulWidget {
+  const RecurrencesScreen({super.key});
+
+  @override
+  State<RecurrencesScreen> createState() => _RecurrencesScreenState();
+}
+
+class _RecurrencesScreenState extends State<RecurrencesScreen> {
+  bool _isGenerating = false;
+
+  Future<void> _generate() async {
+    setState(() => _isGenerating = true);
+
+    final uid = context.read<AuthProvider>().user!.uid;
+    final count = await context.read<RecurrenceProvider>().generateDueTransactions(uid);
+
+    if (!mounted) return;
+    setState(() => _isGenerating = false);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          count > 0
+              ? '$count transaction${count > 1 ? 's' : ''} générée${count > 1 ? 's' : ''}'
+              : 'Aucune transaction à générer — tout est à jour',
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Récurrences'),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: Consumer<RecurrenceProvider>(
+              builder: (context, provider, _) {
+                final hasDue = provider.dueRecurrences.isNotEmpty;
+                return TextButton.icon(
+                  onPressed: _isGenerating ? null : _generate,
+                  icon: _isGenerating
+                      ? const SizedBox(
+                    height: 16, width: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                      : const Icon(Icons.play_arrow, size: 18),
+                  label: Text(hasDue ? 'Générer' : 'À jour'),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+      body: Consumer<RecurrenceProvider>(
+        builder: (context, provider, _) {
+          if (provider.isLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (provider.recurrences.isEmpty) {
+            return Center(
+              child: Text(
+                'Aucune récurrence pour le moment',
+                style: TextStyle(color: Colors.grey.shade600),
+              ),
+            );
+          }
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: provider.recurrences.length,
+            itemBuilder: (context, index) {
+              final recurrence = provider.recurrences[index];
+              return _RecurrenceCard(
+                recurrence: recurrence,
+                currencyFormat: currencyFormat,
+                onToggle: () {
+                  final uid = context.read<AuthProvider>().user!.uid;
+                  context.read<RecurrenceProvider>().toggleRecurrence(uid, recurrence);
+                },
+                onDelete: () {
+                  final uid = context.read<AuthProvider>().user!.uid;
+                  context.read<RecurrenceProvider>().deleteRecurrence(uid, recurrence.id);
+                },
+              );
+            },
+          );
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          builder: (_) => const AddRecurrenceSheet(),
+        ),
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+}
+
+class _RecurrenceCard extends StatelessWidget {
+  final RecurrenceModel recurrence;
+  final NumberFormat currencyFormat;
+  final VoidCallback onToggle;
+  final VoidCallback onDelete;
+
+  const _RecurrenceCard({
+    required this.recurrence,
+    required this.currencyFormat,
+    required this.onToggle,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isExpense = recurrence.type == 'expense';
+    final dateText = DateFormat('dd/MM/yyyy').format(recurrence.nextOccurrence);
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: isExpense
+              ? Colors.red.withOpacity(0.1)
+              : Colors.green.withOpacity(0.1),
+          child: Icon(
+            isExpense ? Icons.arrow_downward : Icons.arrow_upward,
+            color: isExpense ? Colors.red : Colors.green,
+            size: 20,
+          ),
+        ),
+        title: Text(recurrence.label),
+        subtitle: Text(
+          '${currencyFormat.format(recurrence.amount)} · ${_frequencyLabels[recurrence.frequency]} · Prochaine: $dateText',
+        ),
+        isThreeLine: true,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Switch(
+              value: recurrence.isActive,
+              onChanged: (_) => onToggle(),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close, size: 20),
+              onPressed: onDelete,
+              visualDensity: VisualDensity.compact,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

@@ -1,12 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:kashflo_mobile/models/recurrence_model.dart';
 
 class TransactionModel {
   final String id;
   final String type; // 'expense' ou 'income'
   final String category;
   final double amount; // stocké en CAD (devise pivot), comme sur le web
-  final String description;
+  final String label; // aligné sur le champ "label" du web (anciennement "description")
   final DateTime date;
+  final String addedBy; // uid de l'utilisateur, requis côté web
+  final String? recurrenceId; // lien vers la récurrence source, si applicable
   final DateTime createdAt;
 
   TransactionModel({
@@ -14,8 +17,10 @@ class TransactionModel {
     required this.type,
     required this.category,
     required this.amount,
-    required this.description,
+    required this.label,
     required this.date,
+    required this.addedBy,
+    this.recurrenceId,
     required this.createdAt,
   });
 
@@ -26,9 +31,31 @@ class TransactionModel {
       type: data['type'] ?? 'expense',
       category: data['category'] ?? '',
       amount: (data['amount'] as num).toDouble(),
-      description: data['description'] ?? '',
+      label: data['label'] ?? '',
       date: (data['date'] as Timestamp).toDate(),
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      addedBy: data['addedBy'] ?? '',
+      recurrenceId: data['recurrenceId'],
+      createdAt: data['createdAt'] != null
+          ? (data['createdAt'] as Timestamp).toDate()
+          : DateTime.now(),
+    );
+  }
+
+  factory TransactionModel.fromRecurrence(
+      RecurrenceModel recurrence,
+      DateTime date,
+      String addedBy,
+      ) {
+    return TransactionModel(
+      id: '',
+      type: recurrence.type,
+      category: recurrence.category,
+      amount: recurrence.amount,
+      label: recurrence.label,
+      date: date,
+      addedBy: addedBy,
+      recurrenceId: recurrence.id,
+      createdAt: DateTime.now(),
     );
   }
 
@@ -37,9 +64,11 @@ class TransactionModel {
       'type': type,
       'category': category,
       'amount': amount,
-      'description': description,
+      'label': label,
       'date': Timestamp.fromDate(date),
-      'createdAt': Timestamp.fromDate(createdAt),
+      'addedBy': addedBy,
+      'recurrenceId': recurrenceId,
+      'createdAt': FieldValue.serverTimestamp(),
     };
   }
 }

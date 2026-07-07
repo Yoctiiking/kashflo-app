@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
@@ -15,7 +16,7 @@ class DashboardScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Kash Flo'),
+        title: const Text('KashFlo'),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
@@ -34,8 +35,6 @@ class DashboardScreen extends StatelessWidget {
 
           return RefreshIndicator(
             onRefresh: () async {
-              // Le stream se met déjà à jour en temps réel,
-              // ce pull-to-refresh est surtout un feedback UX
               await Future.delayed(const Duration(milliseconds: 300));
             },
             child: ListView(
@@ -66,6 +65,26 @@ class DashboardScreen extends StatelessWidget {
                       ],
                     ),
                   ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _ShortcutCard(
+                        icon: Icons.bar_chart,
+                        label: 'Statistiques',
+                        onTap: () => context.push('/statistics'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _ShortcutCard(
+                        icon: Icons.autorenew,
+                        label: 'Récurrences',
+                        onTap: () => context.push('/recurrences'),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 24),
                 Text(
@@ -101,6 +120,38 @@ class DashboardScreen extends StatelessWidget {
   }
 }
 
+class _ShortcutCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _ShortcutCard({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            children: [
+              Icon(icon, color: Theme.of(context).colorScheme.primary),
+              const SizedBox(height: 6),
+              Text(label, style: const TextStyle(fontSize: 13)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _TransactionTile extends StatelessWidget {
   final TransactionModel transaction;
   final NumberFormat currencyFormat;
@@ -129,7 +180,7 @@ class _TransactionTile extends StatelessWidget {
             size: 20,
           ),
         ),
-        title: Text(transaction.description),
+        title: Text(transaction.label),
         subtitle: Text(transaction.category),
         trailing: Text(
           amountText,

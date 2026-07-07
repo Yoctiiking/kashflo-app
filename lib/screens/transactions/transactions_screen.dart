@@ -166,7 +166,7 @@ class _TransactionCard extends StatelessWidget {
             size: 20,
           ),
         ),
-        title: Text(transaction.description),
+        title: Text(transaction.label),
         subtitle: Text('${transaction.category} · $dateText'),
         trailing: Text(
           amountText,

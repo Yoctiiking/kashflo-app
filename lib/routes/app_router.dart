@@ -5,6 +5,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
 import '../screens/dashboard/dashboard_screen.dart';
+import '../screens/recurrences/recurrences_screen.dart';
+import '../screens/statistics/statistics_screen.dart';
 import '../screens/transactions/transactions_screen.dart';
 import '../screens/budgets/budgets_screen.dart';
 import '../screens/shell/main_shell.dart';
@@ -25,6 +27,8 @@ class AppRouter {
     routes: [
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(path: '/register', builder: (context, state) => const RegisterScreen()),
+      GoRoute(path: '/statistics', builder: (context, state) => const StatisticsScreen()),
+      GoRoute(path: '/recurrences', builder: (context, state) => const RecurrencesScreen()),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
             MainShell(navigationShell: navigationShell),

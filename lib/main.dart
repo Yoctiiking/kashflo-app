@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:kashflo_mobile/providers/budget_provider.dart';
+import 'package:kashflo_mobile/providers/recurrence_provider.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'providers/auth_provider.dart';
@@ -33,9 +34,14 @@ class KashFloApp extends StatelessWidget {
           update: (_, auth, previous) =>
           previous!..updateUser(auth.user?.uid),
         ),
+        ChangeNotifierProxyProvider<AuthProvider, RecurrenceProvider>(
+          create: (_) => RecurrenceProvider(),
+          update: (_, auth, previous) =>
+          previous!..updateUser(auth.user?.uid),
+        ),
       ],
       child: MaterialApp.router(
-        title: 'Kash Flo',
+        title: 'KashFlo',
         theme: ThemeData(
           useMaterial3: true,
           colorSchemeSeed: Colors.teal,
