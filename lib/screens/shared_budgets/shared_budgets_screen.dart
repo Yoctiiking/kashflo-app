@@ -98,6 +98,7 @@ class SharedBudgetsScreen extends StatelessWidget {
         },
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'fab-shared-budgets',
         onPressed: () => showModalBottomSheet(
           context: context,
           isScrollControlled: true,

@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
+import '../providers/shared_budget_detail_provider.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
 import '../screens/dashboard/dashboard_screen.dart';
@@ -36,9 +38,13 @@ class AppRouter {
       GoRoute(path: '/shared-budgets', builder: (context, state) => const SharedBudgetsScreen()),
       GoRoute(
         path: '/shared-budgets/:id',
-        builder: (context, state) => SharedBudgetDetailScreen(
-          budgetId: state.pathParameters['id']!,
-        ),
+        builder: (context, state) {
+          final budgetId = state.pathParameters['id']!;
+          return ChangeNotifierProvider(
+            create: (_) => SharedBudgetDetailProvider()..listen(budgetId),
+            child: SharedBudgetDetailScreen(budgetId: budgetId),
+          );
+        },
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>

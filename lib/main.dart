@@ -51,7 +51,6 @@ class KashFloApp extends StatelessWidget {
           create: (_) => SharedBudgetsProvider(),
           update: (_, auth, previous) => previous!..updateUser(auth.user?.uid),
         ),
-        ChangeNotifierProvider(create: (_) => SharedBudgetDetailProvider()),
 
         // 3. CurrencyProvider — doit venir APRÈS UserProfileProvider,
         //    car il dépend de AuthProvider ET UserProfileProvider

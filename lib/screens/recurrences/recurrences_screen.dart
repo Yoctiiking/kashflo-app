@@ -107,6 +107,7 @@ class _RecurrencesScreenState extends State<RecurrencesScreen> {
         },
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'fab-recurrences',
         onPressed: () => showModalBottomSheet(
           context: context,
           isScrollControlled: true,

@@ -28,14 +28,6 @@ class _SharedBudgetDetailScreenState extends State<SharedBudgetDetailScreen> {
   int _expiryMinutes = 1440;
   bool _isGeneratingInvite = false;
 
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<SharedBudgetDetailProvider>().listen(widget.budgetId);
-    });
-  }
-
   Future<void> _generateInvite() async {
     setState(() => _isGeneratingInvite = true);
 

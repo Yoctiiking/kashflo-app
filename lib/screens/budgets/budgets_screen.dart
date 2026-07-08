@@ -61,6 +61,7 @@ class BudgetsScreen extends StatelessWidget {
         },
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'fab-budgets',
         onPressed: () => showModalBottomSheet(
           context: context,
           isScrollControlled: true,
