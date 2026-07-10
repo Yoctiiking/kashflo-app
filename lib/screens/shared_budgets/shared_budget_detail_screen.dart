@@ -8,6 +8,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/currency_provider.dart';
 import '../../providers/shared_budget_detail_provider.dart';
 import 'add_shared_expense_sheet.dart';
+import 'create_shared_budget_sheet.dart';
 import 'delete_expense_dialog.dart';
 
 const _expiryOptions = [
@@ -154,7 +155,18 @@ class _SharedBudgetDetailScreenState extends State<SharedBudgetDetailScreen> {
                 IconButton(
                   icon: const Icon(Icons.edit_outlined),
                   onPressed: () {
-                    // TODO: réutiliser CreateSharedBudgetSheet en mode édition
+                    final detailProvider = context.read<SharedBudgetDetailProvider>();
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                      ),
+                      builder: (_) => ChangeNotifierProvider.value(
+                        value: detailProvider,
+                        child: CreateSharedBudgetSheet(budget: budget),
+                      ),
+                    );
                   },
                 ),
             ],
