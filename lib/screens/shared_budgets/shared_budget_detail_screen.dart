@@ -3,10 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../../models/shared_expense_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/currency_provider.dart';
 import '../../providers/shared_budget_detail_provider.dart';
 import 'add_shared_expense_sheet.dart';
+import 'delete_expense_dialog.dart';
 
 const _expiryOptions = [
   (label: '1 heure', minutes: 60),
@@ -16,10 +18,12 @@ const _expiryOptions = [
 
 class SharedBudgetDetailScreen extends StatefulWidget {
   final String budgetId;
+
   const SharedBudgetDetailScreen({super.key, required this.budgetId});
 
   @override
-  State<SharedBudgetDetailScreen> createState() => _SharedBudgetDetailScreenState();
+  State<SharedBudgetDetailScreen> createState() =>
+      _SharedBudgetDetailScreenState();
 }
 
 class _SharedBudgetDetailScreenState extends State<SharedBudgetDetailScreen> {
@@ -39,15 +43,16 @@ class _SharedBudgetDetailScreenState extends State<SharedBudgetDetailScreen> {
       multipleUse: _multipleUse,
     );
 
-    final link = 'https://kashflo-web.vercel.app/join-budget/${widget.budgetId}--$code';
+    final link =
+        'https://kashflo-web.vercel.app/join-budget/${widget.budgetId}--$code';
     await Clipboard.setData(ClipboardData(text: link));
 
     if (!mounted) return;
     setState(() => _isGeneratingInvite = false);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Lien copié !')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Lien copié !')));
   }
 
   Future<void> _confirmRemoveMember(String uid, String name) async {
@@ -100,6 +105,24 @@ class _SharedBudgetDetailScreenState extends State<SharedBudgetDetailScreen> {
     }
   }
 
+  Future<void> _handleDeleteExpense(SharedExpenseModel expense) async {
+    final choice = await showDialog<DeleteExpenseChoice>(
+      context: context,
+      builder: (_) => DeleteExpenseDialog(expenseLabel: expense.label),
+    );
+
+    if (choice == null || choice == DeleteExpenseChoice.cancel) return;
+    if (!mounted) return;
+
+    final provider = context.read<SharedBudgetDetailProvider>();
+
+    if (choice == DeleteExpenseChoice.permanent) {
+      await provider.deleteExpensePermanently(expense.id);
+    } else if (choice == DeleteExpenseChoice.unshare) {
+      await provider.unshareExpense(expense);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final currency = context.watch<CurrencyProvider>();
@@ -107,7 +130,9 @@ class _SharedBudgetDetailScreenState extends State<SharedBudgetDetailScreen> {
     return Consumer<SharedBudgetDetailProvider>(
       builder: (context, provider, _) {
         if (provider.isLoading) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
 
         final budget = provider.budget;
@@ -179,7 +204,9 @@ class _SharedBudgetDetailScreenState extends State<SharedBudgetDetailScreen> {
                             : '${currency.formatCurrency(budget.limit - provider.totalSpent)} restant · ${(provider.percentage * 100).round()}%',
                         style: TextStyle(
                           fontSize: 12,
-                          color: provider.isOver ? Colors.red : Colors.grey.shade600,
+                          color: provider.isOver
+                              ? Colors.red
+                              : Colors.grey.shade600,
                         ),
                       ),
                     ],
@@ -204,41 +231,64 @@ class _SharedBudgetDetailScreenState extends State<SharedBudgetDetailScreen> {
                           ),
                           if (isAdmin)
                             TextButton(
-                              onPressed: () => setState(() => _showInvite = !_showInvite),
+                              onPressed: () =>
+                                  setState(() => _showInvite = !_showInvite),
                               child: const Text('+ Inviter'),
                             ),
                         ],
                       ),
                       const SizedBox(height: 8),
                       ...budget.members.map((memberUid) {
-                        final name = provider.memberNames[memberUid] ?? memberUid;
+                        final name =
+                            provider.memberNames[memberUid] ?? memberUid;
                         final isMemberAdmin = memberUid == budget.createdBy;
                         return ListTile(
                           contentPadding: EdgeInsets.zero,
                           leading: CircleAvatar(
-                            child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?'),
+                            child: Text(
+                              name.isNotEmpty ? name[0].toUpperCase() : '?',
+                            ),
                           ),
                           title: Row(
                             children: [
-                              Flexible(child: Text(name, overflow: TextOverflow.ellipsis)),
+                              Flexible(
+                                child: Text(
+                                  name,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
                               if (isMemberAdmin) ...[
                                 const SizedBox(width: 6),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 2,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: Colors.green.withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
-                                  child: const Text('Admin', style: TextStyle(fontSize: 11, color: Colors.green)),
+                                  child: const Text(
+                                    'Admin',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.green,
+                                    ),
+                                  ),
                                 ),
                               ],
                             ],
                           ),
-                          trailing: isAdmin && !isMemberAdmin && memberUid != uid
+                          trailing:
+                              isAdmin && !isMemberAdmin && memberUid != uid
                               ? TextButton(
-                            onPressed: () => _confirmRemoveMember(memberUid, name),
-                            child: const Text('Retirer', style: TextStyle(color: Colors.red)),
-                          )
+                                  onPressed: () =>
+                                      _confirmRemoveMember(memberUid, name),
+                                  child: const Text(
+                                    'Retirer',
+                                    style: TextStyle(color: Colors.red),
+                                  ),
+                                )
                               : null,
                         );
                       }),
@@ -251,27 +301,40 @@ class _SharedBudgetDetailScreenState extends State<SharedBudgetDetailScreen> {
                             return ChoiceChip(
                               label: Text(opt.label),
                               selected: selected,
-                              onSelected: (_) => setState(() => _expiryMinutes = opt.minutes),
+                              onSelected: (_) =>
+                                  setState(() => _expiryMinutes = opt.minutes),
                             );
                           }).toList(),
                         ),
                         const SizedBox(height: 12),
                         SegmentedButton<bool>(
                           segments: const [
-                            ButtonSegment(value: false, label: Text('🔒 Unique')),
-                            ButtonSegment(value: true, label: Text('♾️ Multiples')),
+                            ButtonSegment(
+                              value: false,
+                              label: Text('🔒 Unique'),
+                            ),
+                            ButtonSegment(
+                              value: true,
+                              label: Text('♾️ Multiples'),
+                            ),
                           ],
                           selected: {_multipleUse},
-                          onSelectionChanged: (s) => setState(() => _multipleUse = s.first),
+                          onSelectionChanged: (s) =>
+                              setState(() => _multipleUse = s.first),
                         ),
                         const SizedBox(height: 12),
                         FilledButton(
-                          onPressed: _isGeneratingInvite ? null : _generateInvite,
+                          onPressed: _isGeneratingInvite
+                              ? null
+                              : _generateInvite,
                           child: _isGeneratingInvite
                               ? const SizedBox(
-                            height: 16, width: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
+                                  height: 16,
+                                  width: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
                               : const Text('Générer et copier le lien'),
                         ),
                       ],
@@ -291,16 +354,25 @@ class _SharedBudgetDetailScreenState extends State<SharedBudgetDetailScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('Dépenses', style: TextStyle(fontWeight: FontWeight.w600)),
+                          const Text(
+                            'Dépenses',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
                           TextButton(
-                            onPressed: () => showModalBottomSheet(
-                              context: context,
-                              isScrollControlled: true,
-                              shape: const RoundedRectangleBorder(
-                                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                              ),
-                              builder: (_) => AddSharedExpenseSheet(budgetId: widget.budgetId),
-                            ),
+                            onPressed: () {
+                              final detailProvider = context.read<SharedBudgetDetailProvider>();
+                              showModalBottomSheet(
+                                context: context,
+                                isScrollControlled: true,
+                                shape: const RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                                ),
+                                builder: (_) => ChangeNotifierProvider.value(
+                                  value: detailProvider,
+                                  child: AddSharedExpenseSheet(budgetId: widget.budgetId),
+                                ),
+                              );
+                            },
                             child: const Text('+ Ajouter'),
                           ),
                         ],
@@ -316,14 +388,37 @@ class _SharedBudgetDetailScreenState extends State<SharedBudgetDetailScreen> {
                         )
                       else
                         ...provider.expenses.map((expense) {
-                          final dateText = DateFormat('d MMM', 'fr_FR').format(expense.date);
+                          final dateText = DateFormat(
+                            'd MMM',
+                            'fr_FR',
+                          ).format(expense.date);
+                          final isOwner = expense.addedBy == uid;
                           return ListTile(
                             contentPadding: EdgeInsets.zero,
                             title: Text(expense.label),
-                            subtitle: Text('${expense.addedByName} · $dateText'),
-                            trailing: Text(
-                              currency.formatCurrency(expense.amount),
-                              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
+                            subtitle: Text(
+                              '${expense.addedByName} · $dateText',
+                            ),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  currency.formatCurrency(expense.amount),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.red,
+                                  ),
+                                ),
+                                if (isOwner) ...[
+                                  const SizedBox(width: 4),
+                                  IconButton(
+                                    icon: const Icon(Icons.close, size: 18),
+                                    visualDensity: VisualDensity.compact,
+                                    onPressed: () =>
+                                        _handleDeleteExpense(expense),
+                                  ),
+                                ],
+                              ],
                             ),
                           );
                         }),

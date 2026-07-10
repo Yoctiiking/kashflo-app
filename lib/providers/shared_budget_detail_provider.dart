@@ -77,6 +77,17 @@ class SharedBudgetDetailProvider extends ChangeNotifier {
     return _service.deleteSharedExpense(_budgetId!, expenseId);
   }
 
+  Future<void> unshareExpense(SharedExpenseModel expense) {
+    return _service.unshareExpenseToPersonal(
+      _budgetId!,
+      expense.id,
+      amount: expense.amount,
+      label: expense.label,
+      date: expense.date,
+      addedBy: expense.addedBy,
+    );
+  }
+
   Future<String> createInvite({
     required String createdBy,
     required int expiresInMinutes,

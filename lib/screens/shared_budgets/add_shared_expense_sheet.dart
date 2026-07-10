@@ -85,7 +85,7 @@ class _AddSharedExpenseSheetState extends State<AddSharedExpenseSheet> {
             TextFormField(
               controller: _amountController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(labelText: 'Montant', prefixText: '\$ '),
+              decoration: InputDecoration(labelText: 'Montant', prefixText: '${context.watch<CurrencyProvider>().symbol} '),
               validator: (value) {
                 if (value == null || value.isEmpty) return 'Montant requis';
                 final parsed = double.tryParse(value.replaceAll(',', '.'));

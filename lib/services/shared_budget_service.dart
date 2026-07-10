@@ -111,6 +111,36 @@ class SharedBudgetService {
     return _sharedBudgetsRef.doc(budgetId).collection('expenses').doc(expenseId).delete();
   }
 
+  /// Supprime une dépense partagée et recrée une transaction personnelle
+  /// équivalente pour l'utilisateur qui l'avait ajoutée.
+  Future<void> unshareExpenseToPersonal(
+      String budgetId,
+      String expenseId, {
+        required double amount,
+        required String label,
+        required DateTime date,
+        required String addedBy,
+      }) async {
+    final batch = _db.batch();
+
+    final expenseRef = _sharedBudgetsRef.doc(budgetId).collection('expenses').doc(expenseId);
+    batch.delete(expenseRef);
+
+    final transactionRef = _db.collection('users').doc(addedBy).collection('transactions').doc();
+    batch.set(transactionRef, {
+      'amount': amount,
+      'type': 'expense',
+      'category': 'Autre',
+      'label': label,
+      'date': Timestamp.fromDate(date),
+      'addedBy': addedBy,
+      'recurrenceId': null,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+
+    await batch.commit();
+  }
+
   // ─── INVITES ───
 
   String _generateInviteCode([int length = 10]) {
