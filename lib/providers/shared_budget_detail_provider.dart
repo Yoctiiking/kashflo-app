@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../models/shared_budget_model.dart';
 import '../models/shared_expense_model.dart';
+import '../models/transaction_model.dart';
 import '../services/shared_budget_service.dart';
 import '../services/firestore_service.dart';
 
@@ -19,8 +20,11 @@ class SharedBudgetDetailProvider extends ChangeNotifier {
   bool isLoading = true;
 
   double get totalSpent => expenses.fold(0.0, (sum, e) => sum + e.amount);
-  double get percentage =>
-      budget == null || budget!.limit == 0 ? 0 : (totalSpent / budget!.limit).clamp(0.0, 1.0);
+
+  double get percentage => budget == null || budget!.limit == 0
+      ? 0
+      : (totalSpent / budget!.limit).clamp(0.0, 1.0);
+
   bool get isOver => budget != null && totalSpent > budget!.limit;
 
   void listen(String budgetId) {
@@ -48,10 +52,12 @@ class SharedBudgetDetailProvider extends ChangeNotifier {
 
   Future<void> _loadMemberNames(List<String> uids) async {
     final names = <String, String>{};
-    await Future.wait(uids.map((uid) async {
-      final profile = await _firestoreService.getUserProfile(uid);
-      names[uid] = profile?.displayName ?? uid;
-    }));
+    await Future.wait(
+      uids.map((uid) async {
+        final profile = await _firestoreService.getUserProfile(uid);
+        names[uid] = profile?.displayName ?? uid;
+      }),
+    );
     memberNames = names;
     notifyListeners();
   }
@@ -70,6 +76,39 @@ class SharedBudgetDetailProvider extends ChangeNotifier {
       date: date,
       addedBy: addedBy,
       addedByName: addedByName,
+    );
+  }
+
+  Future<void> migrateTransactions(
+      List<TransactionModel> transactions,
+      String uid,
+      String addedByName,
+      ) async {
+    for (final tx in transactions) {
+      await _service.migrateTransactionToSharedBudget(
+        uid,
+        tx.id,
+        _budgetId!,
+        amount: tx.amount,
+        label: tx.label,
+        date: tx.date,
+        addedByName: addedByName,
+      );
+    }
+  }
+
+  Future<void> updateExpense(
+    String expenseId, {
+    required double amount,
+    required String label,
+    required DateTime date,
+  }) {
+    return _service.updateSharedExpense(
+      _budgetId!,
+      expenseId,
+      amount: amount,
+      label: label,
+      date: date,
     );
   }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -7,9 +8,11 @@ import '../../models/shared_expense_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/currency_provider.dart';
 import '../../providers/shared_budget_detail_provider.dart';
+import 'add_expense_choice_sheet.dart';
 import 'add_shared_expense_sheet.dart';
 import 'create_shared_budget_sheet.dart';
 import 'delete_expense_dialog.dart';
+import 'migrate_transaction_sheet.dart';
 
 const _expiryOptions = [
   (label: '1 heure', minutes: 60),
@@ -124,6 +127,59 @@ class _SharedBudgetDetailScreenState extends State<SharedBudgetDetailScreen> {
     }
   }
 
+  Future<void> _handleAddExpensePressed() async   {
+    final detailProvider = context.read<SharedBudgetDetailProvider>();
+
+    final choice = await showModalBottomSheet<AddExpenseChoice>(
+      context: context,
+      builder: (_) => const AddExpenseChoiceSheet(),
+    );
+
+    if (choice == null || !mounted) return;
+
+    if (choice == AddExpenseChoice.newExpense) {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (_) => ChangeNotifierProvider.value(
+          value: detailProvider,
+          child: AddSharedExpenseSheet(budgetId: widget.budgetId),
+        ),
+      );
+    } else {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (_) => ChangeNotifierProvider.value(
+          value: detailProvider,
+          child: const MigrateTransactionSheet(),
+        ),
+      );
+    }
+  }
+
+  void _handleEditExpense(SharedExpenseModel expense) {
+    final detailProvider = context.read<SharedBudgetDetailProvider>();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => ChangeNotifierProvider.value(
+        value: detailProvider,
+        child: AddSharedExpenseSheet(
+          budgetId: widget.budgetId,
+          expense: expense,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final currency = context.watch<CurrencyProvider>();
@@ -155,12 +211,15 @@ class _SharedBudgetDetailScreenState extends State<SharedBudgetDetailScreen> {
                 IconButton(
                   icon: const Icon(Icons.edit_outlined),
                   onPressed: () {
-                    final detailProvider = context.read<SharedBudgetDetailProvider>();
+                    final detailProvider = context
+                        .read<SharedBudgetDetailProvider>();
                     showModalBottomSheet(
                       context: context,
                       isScrollControlled: true,
                       shape: const RoundedRectangleBorder(
-                        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                        borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(20),
+                        ),
                       ),
                       builder: (_) => ChangeNotifierProvider.value(
                         value: detailProvider,
@@ -359,33 +418,26 @@ class _SharedBudgetDetailScreenState extends State<SharedBudgetDetailScreen> {
               // Dépenses
               Card(
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(8),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
-                            'Dépenses',
-                            style: TextStyle(fontWeight: FontWeight.w600),
+                          Padding(
+                            padding: const EdgeInsets.all(8),
+                            child: const Text(
+                              'Dépenses',
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
                           ),
-                          TextButton(
-                            onPressed: () {
-                              final detailProvider = context.read<SharedBudgetDetailProvider>();
-                              showModalBottomSheet(
-                                context: context,
-                                isScrollControlled: true,
-                                shape: const RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                                ),
-                                builder: (_) => ChangeNotifierProvider.value(
-                                  value: detailProvider,
-                                  child: AddSharedExpenseSheet(budgetId: widget.budgetId),
-                                ),
-                              );
-                            },
-                            child: const Text('+ Ajouter'),
+                          Padding(
+                            padding: const EdgeInsets.all(8),
+                            child: TextButton(
+                              onPressed: () => _handleAddExpensePressed(),
+                              child: const Text('+ Ajouter'),
+                            ),
                           ),
                         ],
                       ),
@@ -405,33 +457,103 @@ class _SharedBudgetDetailScreenState extends State<SharedBudgetDetailScreen> {
                             'fr_FR',
                           ).format(expense.date);
                           final isOwner = expense.addedBy == uid;
-                          return ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            title: Text(expense.label),
-                            subtitle: Text(
-                              '${expense.addedByName} · $dateText',
-                            ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  currency.formatCurrency(expense.amount),
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.red,
+
+                          final card = Card(
+                            margin: EdgeInsets.zero,
+                            shape: const RoundedRectangleBorder(),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          expense.label,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          '${expense.addedByName} · $dateText',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey.shade600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                                if (isOwner) ...[
-                                  const SizedBox(width: 4),
-                                  IconButton(
-                                    icon: const Icon(Icons.close, size: 18),
-                                    visualDensity: VisualDensity.compact,
-                                    onPressed: () =>
-                                        _handleDeleteExpense(expense),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    currency.formatCurrency(expense.amount),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.red,
+                                    ),
                                   ),
                                 ],
-                              ],
+                              ),
                             ),
+                          );
+
+                          final item = !isOwner
+                              ? card
+                              : Slidable(
+                                  key: ValueKey(expense.id),
+                                  startActionPane: ActionPane(
+                                    motion: const DrawerMotion(),
+                                    extentRatio: 0.25,
+                                    children: [
+                                      SlidableAction(
+                                        onPressed: (_) =>
+                                            _handleEditExpense(expense),
+                                        backgroundColor: Colors.blue,
+                                        foregroundColor: Colors.white,
+                                        icon: Icons.edit_outlined,
+                                        label: 'Modifier',
+                                      ),
+                                    ],
+                                  ),
+                                  endActionPane: ActionPane(
+                                    motion: const DrawerMotion(),
+                                    extentRatio: 0.5,
+                                    children: [
+                                      SlidableAction(
+                                        onPressed: (_) => context
+                                            .read<SharedBudgetDetailProvider>()
+                                            .unshareExpense(expense),
+                                        backgroundColor: Colors.orange,
+                                        foregroundColor: Colors.white,
+                                        icon: Icons.call_split,
+                                        label: 'Désolid.',
+                                      ),
+                                      SlidableAction(
+                                        onPressed: (_) => context
+                                            .read<SharedBudgetDetailProvider>()
+                                            .deleteExpensePermanently(
+                                              expense.id,
+                                            ),
+                                        backgroundColor: Colors.red,
+                                        foregroundColor: Colors.white,
+                                        icon: Icons.delete_outline,
+                                        label: 'Supprimer',
+                                      ),
+                                    ],
+                                  ),
+                                  child: card,
+                                );
+
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: item,
                           );
                         }),
                     ],

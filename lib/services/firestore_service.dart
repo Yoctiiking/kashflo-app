@@ -36,6 +36,26 @@ class FirestoreService {
     return _transactionsRef(uid).doc(txId).delete();
   }
 
+  Future<List<TransactionModel>> getMonthTransactions(
+      String uid,
+      int year,
+      int month,
+      ) async {
+    final startOfMonth = DateTime(year, month, 1);
+    final endOfMonth = DateTime(year, month + 1, 1);
+
+    final snapshot = await _transactionsRef(uid)
+        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfMonth))
+        .where('date', isLessThan: Timestamp.fromDate(endOfMonth))
+        .orderBy('date', descending: true)
+        .get();
+
+    return snapshot.docs
+        .map((doc) => TransactionModel.fromFirestore(doc))
+        .where((t) => t.type == 'expense')
+        .toList();
+  }
+
   // Budgets
   Stream<List<BudgetModel>> watchBudgets(String uid) {
     return _budgetsRef(uid).snapshots().map(

@@ -107,6 +107,20 @@ class SharedBudgetService {
     });
   }
 
+  Future<void> updateSharedExpense(
+      String budgetId,
+      String expenseId, {
+        required double amount,
+        required String label,
+        required DateTime date,
+      }) {
+    return _sharedBudgetsRef.doc(budgetId).collection('expenses').doc(expenseId).update({
+      'amount': amount,
+      'label': label,
+      'date': Timestamp.fromDate(date),
+    });
+  }
+
   Future<void> deleteSharedExpense(String budgetId, String expenseId) {
     return _sharedBudgetsRef.doc(budgetId).collection('expenses').doc(expenseId).delete();
   }
@@ -135,6 +149,35 @@ class SharedBudgetService {
       'date': Timestamp.fromDate(date),
       'addedBy': addedBy,
       'recurrenceId': null,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+
+    await batch.commit();
+  }
+
+  /// Déplace une transaction personnelle vers un budget partagé :
+  /// supprime la transaction et crée une dépense partagée équivalente.
+  Future<void> migrateTransactionToSharedBudget(
+      String uid,
+      String transactionId,
+      String budgetId, {
+        required double amount,
+        required String label,
+        required DateTime date,
+        required String addedByName,
+      }) async {
+    final batch = _db.batch();
+
+    final transactionRef = _db.collection('users').doc(uid).collection('transactions').doc(transactionId);
+    batch.delete(transactionRef);
+
+    final expenseRef = _sharedBudgetsRef.doc(budgetId).collection('expenses').doc();
+    batch.set(expenseRef, {
+      'amount': amount,
+      'label': label,
+      'date': Timestamp.fromDate(date),
+      'addedBy': uid,
+      'addedByName': addedByName,
       'createdAt': FieldValue.serverTimestamp(),
     });
 
