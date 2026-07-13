@@ -11,6 +11,7 @@ import 'providers/recurrence_provider.dart';
 import 'providers/user_profile_provider.dart';
 import 'providers/currency_provider.dart';
 import 'providers/app_lock_provider.dart';
+import 'providers/savings_provider.dart';
 import 'providers/theme_provider.dart';
 import 'routes/app_router.dart';
 import 'screens/lock/lock_screen.dart';
@@ -55,6 +56,10 @@ class KashFloApp extends StatelessWidget {
         ),
         ChangeNotifierProxyProvider<AuthProvider, SharedBudgetsProvider>(
           create: (_) => SharedBudgetsProvider(),
+          update: (_, auth, previous) => previous!..updateUser(auth.user?.uid),
+        ),
+        ChangeNotifierProxyProvider<AuthProvider, SavingsProvider>(
+          create: (_) => SavingsProvider(),
           update: (_, auth, previous) => previous!..updateUser(auth.user?.uid),
         ),
 

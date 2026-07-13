@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/recurrence_model.dart';
+import '../models/savings_goal_model.dart';
 import '../models/transaction_model.dart';
 import '../models/budget_model.dart';
 import '../models/user_profile_model.dart';
@@ -15,6 +16,9 @@ class FirestoreService {
 
   CollectionReference _recurrencesRef(String uid) =>
       _db.collection('users').doc(uid).collection('recurrences');
+
+  CollectionReference _savingsGoalsRef(String uid) =>
+      _db.collection('users').doc(uid).collection('savingsGoals');
 
   // Transactions
   Stream<List<TransactionModel>> watchTransactions(String uid) {
@@ -161,6 +165,48 @@ class FirestoreService {
     return _recurrencesRef(uid).doc(recurrenceId).update({
       'nextOccurrence': Timestamp.fromDate(nextOccurrence),
     });
+  }
+
+  // Objectifs d'épargne
+  Stream<List<SavingsGoalModel>> watchSavingsGoals(String uid) {
+    return _savingsGoalsRef(uid)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map(
+          (snap) => snap.docs
+              .map((doc) => SavingsGoalModel.fromFirestore(doc))
+              .toList(),
+        );
+  }
+
+  Future<void> addSavingsGoal(String uid, SavingsGoalModel goal) {
+    return _savingsGoalsRef(uid).add(goal.toFirestore());
+  }
+
+  Future<void> deleteSavingsGoal(String uid, String goalId) {
+    return _savingsGoalsRef(uid).doc(goalId).delete();
+  }
+
+  Future<void> updateSavingsGoalDetails(
+    String uid,
+    String goalId, {
+    required String name,
+    required double targetAmount,
+    required double currentAmount,
+    DateTime? targetDate,
+  }) {
+    return _savingsGoalsRef(uid).doc(goalId).update({
+      'name': name,
+      'targetAmount': targetAmount,
+      'currentAmount': currentAmount,
+      'targetDate': targetDate != null ? Timestamp.fromDate(targetDate) : null,
+    });
+  }
+
+  Future<void> addToSavingsGoal(String uid, String goalId, double amount) {
+    return _savingsGoalsRef(
+      uid,
+    ).doc(goalId).update({'currentAmount': FieldValue.increment(amount)});
   }
 
   // User profile

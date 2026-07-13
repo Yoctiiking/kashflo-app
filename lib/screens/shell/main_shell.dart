@@ -35,6 +35,11 @@ class MainShell extends StatelessWidget {
             selectedIcon: Icon(Icons.pie_chart),
             label: 'Budgets',
           ),
+          NavigationDestination(
+            icon: Icon(Icons.savings_outlined),
+            selectedIcon: Icon(Icons.savings),
+            label: 'Épargne',
+          ),
         ],
       ),
     );

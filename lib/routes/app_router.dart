@@ -9,6 +9,7 @@ import '../screens/auth/register_screen.dart';
 import '../screens/budgets/budget_detail_screen.dart';
 import '../screens/dashboard/dashboard_screen.dart';
 import '../screens/recurrences/recurrences_screen.dart';
+import '../screens/savings/savings_screen.dart';
 import '../screens/settings/settings_screen.dart';
 import '../screens/shared_budgets/shared_budget_detail_screen.dart';
 import '../screens/shared_budgets/shared_budgets_screen.dart';
@@ -97,6 +98,14 @@ class AppRouter {
               GoRoute(
                 path: '/budgets',
                 builder: (context, state) => const BudgetsScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/savings',
+                builder: (context, state) => const SavingsScreen(),
               ),
             ],
           ),
