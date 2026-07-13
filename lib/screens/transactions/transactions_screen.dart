@@ -6,7 +6,9 @@ import '../../providers/auth_provider.dart';
 import '../../providers/currency_provider.dart';
 import '../../providers/transaction_provider.dart';
 import '../../models/transaction_model.dart';
+import '../../utils/transactions_csv_export.dart';
 import 'add_transaction_sheet.dart';
+import 'month_picker_sheet.dart';
 
 enum TransactionFilter { all, expense, income }
 
@@ -19,26 +21,156 @@ class TransactionsScreen extends StatefulWidget {
 
 class _TransactionsScreenState extends State<TransactionsScreen> {
   TransactionFilter _filter = TransactionFilter.all;
+  final _searchController = TextEditingController();
+  bool _isSearching = false;
+  bool _isExporting = false;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _stopSearching() {
+    setState(() {
+      _isSearching = false;
+      _searchController.clear();
+    });
+  }
+
+  Future<void> _pickMonth(TransactionProvider txProvider) async {
+    final picked = await showModalBottomSheet<DateTime>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => MonthPickerSheet(initialMonth: txProvider.selectedMonth),
+    );
+    if (picked != null) txProvider.goToMonth(picked);
+  }
+
+  Future<void> _export(
+    TransactionProvider txProvider,
+    CurrencyProvider currency,
+  ) async {
+    // Ancre requise pour le popover de partage (iPad / certains simulateurs).
+    final box = context.findRenderObject() as RenderBox?;
+    final origin = box != null
+        ? box.localToGlobal(Offset.zero) & box.size
+        : null;
+
+    setState(() => _isExporting = true);
+    try {
+      await exportTransactionsToCsv(
+        transactions: txProvider.transactionsForSelectedMonth,
+        month: txProvider.selectedMonth,
+        currency: currency,
+        sharePositionOrigin: origin,
+      );
+    } finally {
+      if (mounted) setState(() => _isExporting = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final currency = context.watch<CurrencyProvider>();
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Transactions')),
+      appBar: AppBar(
+        title: _isSearching
+            ? TextField(
+                controller: _searchController,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  hintText: 'Rechercher une transaction',
+                  border: InputBorder.none,
+                ),
+                onChanged: (_) => setState(() {}),
+              )
+            : Consumer<TransactionProvider>(
+                builder: (context, txProvider, _) {
+                  final monthLabel = DateFormat.yMMMM(
+                    'fr_FR',
+                  ).format(txProvider.selectedMonth);
+                  final label =
+                      monthLabel[0].toUpperCase() + monthLabel.substring(1);
+
+                  return Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.chevron_left),
+                        onPressed: txProvider.goToPreviousMonth,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      InkWell(
+                        borderRadius: BorderRadius.circular(8),
+                        onTap: () => _pickMonth(txProvider),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 4,
+                          ),
+                          child: Text(label),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.chevron_right),
+                        onPressed: txProvider.canGoToNextMonth
+                            ? txProvider.goToNextMonth
+                            : null,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ],
+                  );
+                },
+              ),
+        actions: [
+          if (_isSearching)
+            IconButton(icon: const Icon(Icons.close), onPressed: _stopSearching)
+          else ...[
+            IconButton(
+              icon: const Icon(Icons.search),
+              onPressed: () => setState(() => _isSearching = true),
+            ),
+            Consumer<TransactionProvider>(
+              builder: (context, txProvider, _) => IconButton(
+                icon: _isExporting
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.ios_share),
+                onPressed: _isExporting
+                    ? null
+                    : () => _export(txProvider, currency),
+              ),
+            ),
+          ],
+        ],
+      ),
       body: Consumer<TransactionProvider>(
         builder: (context, txProvider, _) {
           if (txProvider.isLoading) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final filtered = txProvider.transactions.where((t) {
-            switch (_filter) {
-              case TransactionFilter.expense:
-                return t.type == 'expense';
-              case TransactionFilter.income:
-                return t.type == 'income';
-              case TransactionFilter.all:
-                return true;
-            }
+          final query = _searchController.text.trim().toLowerCase();
+
+          final filtered = txProvider.transactionsForSelectedMonth.where((t) {
+            final matchesFilter = switch (_filter) {
+              TransactionFilter.expense => t.type == 'expense',
+              TransactionFilter.income => t.type == 'income',
+              TransactionFilter.all => true,
+            };
+            final matchesQuery =
+                query.isEmpty ||
+                t.label.toLowerCase().contains(query) ||
+                t.category.toLowerCase().contains(query);
+            return matchesFilter && matchesQuery;
           }).toList();
 
           return Column(
@@ -75,37 +207,39 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                           style: TextStyle(color: Colors.grey.shade600),
                         ),
                       )
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: filtered.length,
-                        itemBuilder: (context, index) {
-                          final tx = filtered[index];
-                          return _TransactionCard(
-                            transaction: tx,
-                            onEdit: () => showModalBottomSheet(
-                              context: context,
-                              isScrollControlled: true,
-                              shape: const RoundedRectangleBorder(
-                                borderRadius: BorderRadius.vertical(
-                                  top: Radius.circular(20),
+                    : SlidableAutoCloseBehavior(
+                        child: ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: filtered.length,
+                          itemBuilder: (context, index) {
+                            final tx = filtered[index];
+                            return _TransactionCard(
+                              transaction: tx,
+                              onEdit: () => showModalBottomSheet(
+                                context: context,
+                                isScrollControlled: true,
+                                shape: const RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.vertical(
+                                    top: Radius.circular(20),
+                                  ),
                                 ),
+                                builder: (_) =>
+                                    AddTransactionSheet(transaction: tx),
                               ),
-                              builder: (_) =>
-                                  AddTransactionSheet(transaction: tx),
-                            ),
-                            onDelete: () async {
-                              final confirmed = await _confirmDelete(context);
-                              if (!confirmed || !context.mounted) return;
-                              final uid = context
-                                  .read<AuthProvider>()
-                                  .user!
-                                  .uid;
-                              context
-                                  .read<TransactionProvider>()
-                                  .deleteTransaction(uid, tx.id);
-                            },
-                          );
-                        },
+                              onDelete: () async {
+                                final confirmed = await _confirmDelete(context);
+                                if (!confirmed || !context.mounted) return;
+                                final uid = context
+                                    .read<AuthProvider>()
+                                    .user!
+                                    .uid;
+                                context
+                                    .read<TransactionProvider>()
+                                    .deleteTransaction(uid, tx.id);
+                              },
+                            );
+                          },
+                        ),
                       ),
               ),
             ],

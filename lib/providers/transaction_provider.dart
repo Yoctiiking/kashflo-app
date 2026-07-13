@@ -12,7 +12,46 @@ class TransactionProvider extends ChangeNotifier {
   List<TransactionModel> _transactions = [];
   bool _isLoading = true;
 
+  DateTime _selectedMonth = DateTime(DateTime.now().year, DateTime.now().month);
+
   bool get isLoading => _isLoading;
+
+  /// Mois actuellement affiché dans l'écran Transactions.
+  DateTime get selectedMonth => _selectedMonth;
+
+  /// Le mois sélectionné ne peut pas dépasser le mois courant.
+  bool get canGoToNextMonth {
+    final now = DateTime.now();
+    return _selectedMonth.year < now.year ||
+        (_selectedMonth.year == now.year && _selectedMonth.month < now.month);
+  }
+
+  void goToPreviousMonth() {
+    _selectedMonth = DateTime(_selectedMonth.year, _selectedMonth.month - 1);
+    notifyListeners();
+  }
+
+  void goToNextMonth() {
+    if (!canGoToNextMonth) return;
+    _selectedMonth = DateTime(_selectedMonth.year, _selectedMonth.month + 1);
+    notifyListeners();
+  }
+
+  void goToMonth(DateTime month) {
+    _selectedMonth = DateTime(month.year, month.month);
+    notifyListeners();
+  }
+
+  /// Transactions du mois sélectionné dans l'écran Transactions.
+  List<TransactionModel> get transactionsForSelectedMonth {
+    return _transactions
+        .where(
+          (t) =>
+              t.date.year == _selectedMonth.year &&
+              t.date.month == _selectedMonth.month,
+        )
+        .toList();
+  }
 
   /// Transactions du mois en cours uniquement (aligné sur le web)
   List<TransactionModel> get transactions {

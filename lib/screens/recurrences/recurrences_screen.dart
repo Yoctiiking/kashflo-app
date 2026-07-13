@@ -101,30 +101,32 @@ class _RecurrencesScreenState extends State<RecurrencesScreen> {
             );
           }
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: provider.recurrences.length,
-            itemBuilder: (context, index) {
-              final recurrence = provider.recurrences[index];
-              return _RecurrenceCard(
-                recurrence: recurrence,
-                onToggle: () {
-                  final uid = context.read<AuthProvider>().user!.uid;
-                  context.read<RecurrenceProvider>().toggleRecurrence(
-                    uid,
-                    recurrence,
-                  );
-                },
-                onEdit: () => _handleEditRecurrence(recurrence),
-                onDelete: () {
-                  final uid = context.read<AuthProvider>().user!.uid;
-                  context.read<RecurrenceProvider>().deleteRecurrence(
-                    uid,
-                    recurrence.id,
-                  );
-                },
-              );
-            },
+          return SlidableAutoCloseBehavior(
+            child: ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: provider.recurrences.length,
+              itemBuilder: (context, index) {
+                final recurrence = provider.recurrences[index];
+                return _RecurrenceCard(
+                  recurrence: recurrence,
+                  onToggle: () {
+                    final uid = context.read<AuthProvider>().user!.uid;
+                    context.read<RecurrenceProvider>().toggleRecurrence(
+                      uid,
+                      recurrence,
+                    );
+                  },
+                  onEdit: () => _handleEditRecurrence(recurrence),
+                  onDelete: () {
+                    final uid = context.read<AuthProvider>().user!.uid;
+                    context.read<RecurrenceProvider>().deleteRecurrence(
+                      uid,
+                      recurrence.id,
+                    );
+                  },
+                );
+              },
+            ),
           );
         },
       ),

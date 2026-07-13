@@ -230,359 +230,366 @@ class _SharedBudgetDetailScreenState extends State<SharedBudgetDetailScreen> {
                 ),
             ],
           ),
-          body: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              // Progression
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            '${currency.formatCurrency(provider.totalSpent)} dépensé',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: provider.isOver ? Colors.red : null,
-                            ),
-                          ),
-                          Text(
-                            currency.formatCurrency(budget.limit),
-                            style: TextStyle(color: Colors.grey.shade600),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: LinearProgressIndicator(
-                          value: provider.percentage,
-                          minHeight: 8,
-                          backgroundColor: Colors.grey.shade200,
-                          valueColor: AlwaysStoppedAnimation(
-                            provider.isOver ? Colors.red : Colors.green,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        provider.isOver
-                            ? '⚠️ Dépassé de ${currency.formatCurrency(provider.totalSpent - budget.limit)}'
-                            : '${currency.formatCurrency(budget.limit - provider.totalSpent)} restant · ${(provider.percentage * 100).round()}%',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: provider.isOver
-                              ? Colors.red
-                              : Colors.grey.shade600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Membres
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Membres (${budget.members.length})',
-                            style: const TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                          if (isAdmin)
-                            TextButton(
-                              onPressed: () =>
-                                  setState(() => _showInvite = !_showInvite),
-                              child: const Text('+ Inviter'),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      ...budget.members.map((memberUid) {
-                        final name =
-                            provider.memberNames[memberUid] ?? memberUid;
-                        final isMemberAdmin = memberUid == budget.createdBy;
-                        return ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: CircleAvatar(
-                            child: Text(
-                              name.isNotEmpty ? name[0].toUpperCase() : '?',
-                            ),
-                          ),
-                          title: Row(
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  name,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+          body: SlidableAutoCloseBehavior(
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                // Progression
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              '${currency.formatCurrency(provider.totalSpent)} dépensé',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: provider.isOver ? Colors.red : null,
                               ),
-                              if (isMemberAdmin) ...[
-                                const SizedBox(width: 6),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.green.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Text(
-                                    'Admin',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.green,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ],
-                          ),
-                          trailing:
-                              isAdmin && !isMemberAdmin && memberUid != uid
-                              ? TextButton(
-                                  onPressed: () =>
-                                      _confirmRemoveMember(memberUid, name),
-                                  child: const Text(
-                                    'Retirer',
-                                    style: TextStyle(color: Colors.red),
-                                  ),
-                                )
-                              : null,
-                        );
-                      }),
-                      if (_showInvite) ...[
-                        const Divider(height: 24),
-                        Wrap(
-                          spacing: 8,
-                          children: _expiryOptions.map((opt) {
-                            final selected = _expiryMinutes == opt.minutes;
-                            return ChoiceChip(
-                              label: Text(opt.label),
-                              selected: selected,
-                              onSelected: (_) =>
-                                  setState(() => _expiryMinutes = opt.minutes),
-                            );
-                          }).toList(),
-                        ),
-                        const SizedBox(height: 12),
-                        SegmentedButton<bool>(
-                          segments: const [
-                            ButtonSegment(
-                              value: false,
-                              label: Text('🔒 Unique'),
                             ),
-                            ButtonSegment(
-                              value: true,
-                              label: Text('♾️ Multiples'),
+                            Text(
+                              currency.formatCurrency(budget.limit),
+                              style: TextStyle(color: Colors.grey.shade600),
                             ),
                           ],
-                          selected: {_multipleUse},
-                          onSelectionChanged: (s) =>
-                              setState(() => _multipleUse = s.first),
                         ),
-                        const SizedBox(height: 12),
-                        FilledButton(
-                          onPressed: _isGeneratingInvite
-                              ? null
-                              : _generateInvite,
-                          child: _isGeneratingInvite
-                              ? const SizedBox(
-                                  height: 16,
-                                  width: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Text('Générer et copier le lien'),
+                        const SizedBox(height: 8),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: LinearProgressIndicator(
+                            value: provider.percentage,
+                            minHeight: 8,
+                            backgroundColor: Colors.grey.shade200,
+                            valueColor: AlwaysStoppedAnimation(
+                              provider.isOver ? Colors.red : Colors.green,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          provider.isOver
+                              ? '⚠️ Dépassé de ${currency.formatCurrency(provider.totalSpent - budget.limit)}'
+                              : '${currency.formatCurrency(budget.limit - provider.totalSpent)} restant · ${(provider.percentage * 100).round()}%',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: provider.isOver
+                                ? Colors.red
+                                : Colors.grey.shade600,
+                          ),
                         ),
                       ],
-                    ],
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              // Dépenses
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Dépenses',
-                            style: TextStyle(fontWeight: FontWeight.w600),
-                          ),
-                          TextButton(
-                            onPressed: () => _handleAddExpensePressed(),
-                            child: const Text('+ Ajouter'),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      if (provider.expenses.isEmpty)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          child: Text(
-                            'Aucune dépense pour l\'instant',
-                            style: TextStyle(color: Colors.grey.shade600),
-                          ),
-                        )
-                      else
-                        ...provider.expenses.map((expense) {
-                          final dateText = DateFormat(
-                            'd MMM',
-                            'fr_FR',
-                          ).format(expense.date);
-                          final isOwner = expense.addedBy == uid;
-
-                          final containerColor = Theme.of(
-                            context,
-                          ).colorScheme.surfaceContainerLow;
-
-                          final card = Card(
-                            margin: EdgeInsets.zero,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 12,
+                // Membres
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Membres (${budget.members.length})',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
                               ),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          expense.label,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          '${provider.memberNames[expense.addedBy] ?? expense.addedByName} · $dateText',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey.shade600,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+                            ),
+                            if (isAdmin)
+                              TextButton(
+                                onPressed: () =>
+                                    setState(() => _showInvite = !_showInvite),
+                                child: const Text('+ Inviter'),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        ...budget.members.map((memberUid) {
+                          final name =
+                              provider.memberNames[memberUid] ?? memberUid;
+                          final isMemberAdmin = memberUid == budget.createdBy;
+                          return ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: CircleAvatar(
+                              child: Text(
+                                name.isNotEmpty ? name[0].toUpperCase() : '?',
+                              ),
+                            ),
+                            title: Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    name,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    currency.formatCurrency(expense.amount),
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.red,
+                                ),
+                                if (isMemberAdmin) ...[
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.green.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Text(
+                                      'Admin',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.green,
+                                      ),
                                     ),
                                   ),
                                 ],
-                              ),
+                              ],
                             ),
-                          );
-
-                          final item = !isOwner
-                              ? card
-                              : Container(
-                                  color: containerColor,
-                                  child: Slidable(
-                                    key: ValueKey(expense.id),
-                                    startActionPane: ActionPane(
-                                      motion: const DrawerMotion(),
-                                      extentRatio: 0.22,
-                                      children: [
-                                        CustomSlidableAction(
-                                          onPressed: (_) =>
-                                              _handleEditExpense(expense),
-                                          backgroundColor: containerColor,
-                                          child: const _CircleActionIcon(
-                                            color: Colors.blue,
-                                            icon: Icons.edit_outlined,
-                                            maxRatio: 0.22,
-                                          ),
-                                        ),
-                                      ],
+                            trailing:
+                                isAdmin && !isMemberAdmin && memberUid != uid
+                                ? TextButton(
+                                    onPressed: () =>
+                                        _confirmRemoveMember(memberUid, name),
+                                    child: const Text(
+                                      'Retirer',
+                                      style: TextStyle(color: Colors.red),
                                     ),
-                                    endActionPane: ActionPane(
-                                      motion: const DrawerMotion(),
-                                      extentRatio: 0.4,
-                                      children: [
-                                        CustomSlidableAction(
-                                          onPressed: (_) => context
-                                              .read<
-                                                SharedBudgetDetailProvider
-                                              >()
-                                              .unshareExpense(expense),
-                                          backgroundColor: containerColor,
-                                          child: const _CircleActionIcon(
-                                            color: Colors.orange,
-                                            icon: Icons.call_split,
-                                            maxRatio: 0.4,
-                                          ),
-                                        ),
-                                        CustomSlidableAction(
-                                          onPressed: (_) => context
-                                              .read<
-                                                SharedBudgetDetailProvider
-                                              >()
-                                              .deleteExpensePermanently(
-                                                expense.id,
-                                              ),
-                                          backgroundColor: containerColor,
-                                          child: const _CircleActionIcon(
-                                            color: Colors.red,
-                                            icon: Icons.delete_outline,
-                                            maxRatio: 0.4,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    child: card,
-                                  ),
-                                );
-
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: item,
+                                  )
+                                : null,
                           );
                         }),
-                    ],
+                        if (_showInvite) ...[
+                          const Divider(height: 24),
+                          Wrap(
+                            spacing: 8,
+                            children: _expiryOptions.map((opt) {
+                              final selected = _expiryMinutes == opt.minutes;
+                              return ChoiceChip(
+                                label: Text(opt.label),
+                                selected: selected,
+                                onSelected: (_) => setState(
+                                  () => _expiryMinutes = opt.minutes,
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                          const SizedBox(height: 12),
+                          SegmentedButton<bool>(
+                            segments: const [
+                              ButtonSegment(
+                                value: false,
+                                label: Text('🔒 Unique'),
+                              ),
+                              ButtonSegment(
+                                value: true,
+                                label: Text('♾️ Multiples'),
+                              ),
+                            ],
+                            selected: {_multipleUse},
+                            onSelectionChanged: (s) =>
+                                setState(() => _multipleUse = s.first),
+                          ),
+                          const SizedBox(height: 12),
+                          FilledButton(
+                            onPressed: _isGeneratingInvite
+                                ? null
+                                : _generateInvite,
+                            child: _isGeneratingInvite
+                                ? const SizedBox(
+                                    height: 16,
+                                    width: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Text('Générer et copier le lien'),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
+                const SizedBox(height: 16),
 
-              if (!isAdmin) ...[
-                const SizedBox(height: 24),
-                OutlinedButton(
-                  onPressed: _confirmLeave,
-                  style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
-                  child: const Text('Quitter ce budget partagé'),
+                // Dépenses
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Dépenses',
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                            TextButton(
+                              onPressed: () => _handleAddExpensePressed(),
+                              child: const Text('+ Ajouter'),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        if (provider.expenses.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            child: Text(
+                              'Aucune dépense pour l\'instant',
+                              style: TextStyle(color: Colors.grey.shade600),
+                            ),
+                          )
+                        else
+                          ...provider.expenses.map((expense) {
+                            final dateText = DateFormat(
+                              'd MMM',
+                              'fr_FR',
+                            ).format(expense.date);
+                            final isOwner = expense.addedBy == uid;
+
+                            final containerColor = Theme.of(
+                              context,
+                            ).colorScheme.surfaceContainerLow;
+
+                            final card = Card(
+                              margin: EdgeInsets.zero,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            expense.label,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            '${provider.memberNames[expense.addedBy] ?? expense.addedByName} · $dateText',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey.shade600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      currency.formatCurrency(expense.amount),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.red,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+
+                            final item = !isOwner
+                                ? card
+                                : Container(
+                                    color: containerColor,
+                                    child: Slidable(
+                                      key: ValueKey(expense.id),
+                                      startActionPane: ActionPane(
+                                        motion: const DrawerMotion(),
+                                        extentRatio: 0.22,
+                                        children: [
+                                          CustomSlidableAction(
+                                            onPressed: (_) =>
+                                                _handleEditExpense(expense),
+                                            backgroundColor: containerColor,
+                                            child: const _CircleActionIcon(
+                                              color: Colors.blue,
+                                              icon: Icons.edit_outlined,
+                                              maxRatio: 0.22,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      endActionPane: ActionPane(
+                                        motion: const DrawerMotion(),
+                                        extentRatio: 0.4,
+                                        children: [
+                                          CustomSlidableAction(
+                                            onPressed: (_) => context
+                                                .read<
+                                                  SharedBudgetDetailProvider
+                                                >()
+                                                .unshareExpense(expense),
+                                            backgroundColor: containerColor,
+                                            child: const _CircleActionIcon(
+                                              color: Colors.orange,
+                                              icon: Icons.call_split,
+                                              maxRatio: 0.4,
+                                            ),
+                                          ),
+                                          CustomSlidableAction(
+                                            onPressed: (_) => context
+                                                .read<
+                                                  SharedBudgetDetailProvider
+                                                >()
+                                                .deleteExpensePermanently(
+                                                  expense.id,
+                                                ),
+                                            backgroundColor: containerColor,
+                                            child: const _CircleActionIcon(
+                                              color: Colors.red,
+                                              icon: Icons.delete_outline,
+                                              maxRatio: 0.4,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      child: card,
+                                    ),
+                                  );
+
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: item,
+                            );
+                          }),
+                      ],
+                    ),
+                  ),
                 ),
+
+                if (!isAdmin) ...[
+                  const SizedBox(height: 24),
+                  OutlinedButton(
+                    onPressed: _confirmLeave,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                    ),
+                    child: const Text('Quitter ce budget partagé'),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         );
       },

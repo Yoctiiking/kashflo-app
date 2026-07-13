@@ -40,34 +40,36 @@ class BudgetsScreen extends StatelessWidget {
             );
           }
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: budgetProvider.budgets.length,
-            itemBuilder: (context, index) {
-              final budget = budgetProvider.budgets[index];
-              final spent = budgetProvider.spentFor(
-                budget,
-                txProvider.allTransactions,
-              );
-              return _BudgetCard(
-                budget: budget,
-                spent: spent,
-                onEdit: () => showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(20),
+          return SlidableAutoCloseBehavior(
+            child: ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: budgetProvider.budgets.length,
+              itemBuilder: (context, index) {
+                final budget = budgetProvider.budgets[index];
+                final spent = budgetProvider.spentFor(
+                  budget,
+                  txProvider.allTransactions,
+                );
+                return _BudgetCard(
+                  budget: budget,
+                  spent: spent,
+                  onEdit: () => showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(20),
+                      ),
                     ),
+                    builder: (_) => AddBudgetSheet(budget: budget),
                   ),
-                  builder: (_) => AddBudgetSheet(budget: budget),
-                ),
-                onDelete: () {
-                  final uid = context.read<AuthProvider>().user!.uid;
-                  context.read<BudgetProvider>().deleteBudget(uid, budget.id);
-                },
-              );
-            },
+                  onDelete: () {
+                    final uid = context.read<AuthProvider>().user!.uid;
+                    context.read<BudgetProvider>().deleteBudget(uid, budget.id);
+                  },
+                );
+              },
+            ),
           );
         },
       ),
