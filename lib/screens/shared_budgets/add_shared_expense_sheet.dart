@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/currency_provider.dart';
 import '../../providers/shared_budget_detail_provider.dart';
+import '../../providers/user_profile_provider.dart';
 import '../../models/shared_expense_model.dart';
 
 class AddSharedExpenseSheet extends StatefulWidget {
@@ -64,6 +65,11 @@ class _AddSharedExpenseSheetState extends State<AddSharedExpenseSheet> {
       _amountController.text.replaceAll(',', '.'),
     );
     final amountInBase = currency.toBase(enteredAmount);
+    // On ne garde que le jour (sans l'heure) pour que le tri par date reste
+    // cohérent avec les entrées créées côté web, qui n'ont pas de composante
+    // horaire. Le départage entre dépenses d'un même jour se fait ensuite
+    // via createdAt.
+    final normalizedDate = DateTime(_date.year, _date.month, _date.day);
 
     final provider = context.read<SharedBudgetDetailProvider>();
 
@@ -72,17 +78,18 @@ class _AddSharedExpenseSheetState extends State<AddSharedExpenseSheet> {
         widget.expense!.id,
         amount: amountInBase,
         label: _labelController.text.trim(),
-        date: _date,
+        date: normalizedDate,
       );
     } else {
-      final authProvider = context.read<AuthProvider>();
-      final uid = authProvider.user!.uid;
-      final displayName = authProvider.user!.displayName ?? 'Utilisateur';
+      final uid = context.read<AuthProvider>().user!.uid;
+      final displayName =
+          context.read<UserProfileProvider>().profile?.displayName ??
+          'Utilisateur';
 
       await provider.addExpense(
         amount: amountInBase,
         label: _labelController.text.trim(),
-        date: _date,
+        date: normalizedDate,
         addedBy: uid,
         addedByName: displayName,
       );

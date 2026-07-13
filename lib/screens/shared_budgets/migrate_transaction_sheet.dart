@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/currency_provider.dart';
 import '../../providers/shared_budget_detail_provider.dart';
+import '../../providers/user_profile_provider.dart';
 import '../../services/firestore_service.dart';
 import '../../models/transaction_model.dart';
 
@@ -130,9 +131,10 @@ class _MigrateTransactionSheetState extends State<MigrateTransactionSheet> {
 
     setState(() => _isMigrating = true);
 
-    final authProvider = context.read<AuthProvider>();
-    final uid = authProvider.user!.uid;
-    final displayName = authProvider.user!.displayName ?? 'Utilisateur';
+    final uid = context.read<AuthProvider>().user!.uid;
+    final displayName =
+        context.read<UserProfileProvider>().profile?.displayName ??
+        'Utilisateur';
 
     await context.read<SharedBudgetDetailProvider>().migrateTransactions(
       toMigrate,

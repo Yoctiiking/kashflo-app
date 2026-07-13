@@ -482,7 +482,7 @@ class _SharedBudgetDetailScreenState extends State<SharedBudgetDetailScreen> {
                                         ),
                                         const SizedBox(height: 2),
                                         Text(
-                                          '${expense.addedByName} · $dateText',
+                                          '${provider.memberNames[expense.addedBy] ?? expense.addedByName} · $dateText',
                                           style: TextStyle(
                                             fontSize: 12,
                                             color: Colors.grey.shade600,
