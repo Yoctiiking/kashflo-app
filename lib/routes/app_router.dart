@@ -49,6 +49,10 @@ class AppRouter {
         builder: (context, state) => const RecurrencesScreen(),
       ),
       GoRoute(
+        path: '/transactions',
+        builder: (context, state) => const TransactionsScreen(),
+      ),
+      GoRoute(
         path: '/settings',
         builder: (context, state) => const SettingsScreen(),
       ),
@@ -82,14 +86,6 @@ class AppRouter {
               GoRoute(
                 path: '/dashboard',
                 builder: (context, state) => const DashboardScreen(),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/transactions',
-                builder: (context, state) => const TransactionsScreen(),
               ),
             ],
           ),

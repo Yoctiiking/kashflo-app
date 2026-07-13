@@ -60,9 +60,9 @@ class DashboardScreen extends StatelessWidget {
                           currency.formatCurrency(balance),
                           style: Theme.of(context).textTheme.headlineMedium
                               ?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: isNegative ? Colors.red : Colors.green,
-                          ),
+                                fontWeight: FontWeight.bold,
+                                color: isNegative ? Colors.red : Colors.green,
+                              ),
                         ),
                       ],
                     ),
@@ -73,9 +73,9 @@ class DashboardScreen extends StatelessWidget {
                   children: [
                     Expanded(
                       child: _ShortcutCard(
-                        icon: Icons.bar_chart,
-                        label: 'Statistiques',
-                        onTap: () => context.push('/statistics'),
+                        icon: Icons.receipt_long,
+                        label: 'Transactions',
+                        onTap: () => context.push('/transactions'),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -84,6 +84,14 @@ class DashboardScreen extends StatelessWidget {
                         icon: Icons.autorenew,
                         label: 'Récurrences',
                         onTap: () => context.push('/recurrences'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _ShortcutCard(
+                        icon: Icons.bar_chart,
+                        label: 'Statistiques',
+                        onTap: () => context.push('/statistics'),
                       ),
                     ),
                   ],
@@ -108,7 +116,7 @@ class DashboardScreen extends StatelessWidget {
                   )
                 else
                   ...txProvider.recentTransactions.map(
-                        (tx) => _TransactionTile(transaction: tx),
+                    (tx) => _TransactionTile(transaction: tx),
                   ),
               ],
             ),
