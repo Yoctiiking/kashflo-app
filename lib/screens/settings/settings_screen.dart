@@ -2,8 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/app_lock_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/theme_provider.dart';
 import '../../providers/user_profile_provider.dart';
 import '../lock/pin_entry_sheet.dart';
+
+const _themeModeLabels = {
+  ThemeMode.system: 'Système',
+  ThemeMode.light: 'Clair',
+  ThemeMode.dark: 'Sombre',
+};
+
+const _themeModeIcons = {
+  ThemeMode.system: Icons.brightness_auto,
+  ThemeMode.light: Icons.light_mode,
+  ThemeMode.dark: Icons.dark_mode,
+};
 
 const _currencies = {
   'CAD': 'Dollar canadien (CAD)',
@@ -20,7 +33,35 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Paramètres')),
+      appBar: AppBar(
+        title: const Text('Paramètres'),
+        actions: [
+          Consumer<ThemeProvider>(
+            builder: (context, themeProvider, _) {
+              return PopupMenuButton<ThemeMode>(
+                icon: Icon(_themeModeIcons[themeProvider.themeMode]),
+                tooltip: 'Thème',
+                initialValue: themeProvider.themeMode,
+                onSelected: themeProvider.setThemeMode,
+                itemBuilder: (context) => _themeModeLabels.entries
+                    .map(
+                      (e) => PopupMenuItem(
+                        value: e.key,
+                        child: Row(
+                          children: [
+                            Icon(_themeModeIcons[e.key], size: 20),
+                            const SizedBox(width: 12),
+                            Text(e.value),
+                          ],
+                        ),
+                      ),
+                    )
+                    .toList(),
+              );
+            },
+          ),
+        ],
+      ),
       body: Consumer<UserProfileProvider>(
         builder: (context, profileProvider, _) {
           if (profileProvider.isLoading) {

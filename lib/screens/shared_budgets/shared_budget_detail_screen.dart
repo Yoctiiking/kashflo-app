@@ -12,7 +12,6 @@ import '../../providers/shared_budget_detail_provider.dart';
 import 'add_expense_choice_sheet.dart';
 import 'add_shared_expense_sheet.dart';
 import 'create_shared_budget_sheet.dart';
-import 'delete_expense_dialog.dart';
 import 'migrate_transaction_sheet.dart';
 
 const _expiryOptions = [
@@ -120,23 +119,6 @@ class _SharedBudgetDetailScreenState extends State<SharedBudgetDetailScreen> {
     }
   }
 
-  Future<void> _handleDeleteExpense(SharedExpenseModel expense) async {
-    final choice = await showDialog<DeleteExpenseChoice>(
-      context: context,
-      builder: (_) => DeleteExpenseDialog(expenseLabel: expense.label),
-    );
-
-    if (choice == null || choice == DeleteExpenseChoice.cancel) return;
-    if (!mounted) return;
-
-    final provider = context.read<SharedBudgetDetailProvider>();
-
-    if (choice == DeleteExpenseChoice.permanent) {
-      await provider.deleteExpensePermanently(expense.id);
-    } else if (choice == DeleteExpenseChoice.unshare) {
-      await provider.unshareExpense(expense);
-    }
-  }
 
   Future<void> _handleAddExpensePressed() async {
     final detailProvider = context.read<SharedBudgetDetailProvider>();

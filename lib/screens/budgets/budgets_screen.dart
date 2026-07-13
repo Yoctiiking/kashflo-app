@@ -156,7 +156,9 @@ class _BudgetCard extends StatelessWidget {
                     text: currency.formatCurrency(spent),
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: isOverBudget ? Colors.red : Colors.black87,
+                      color: isOverBudget
+                          ? Colors.red
+                          : Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   TextSpan(text: ' / ${currency.formatCurrency(budget.limit)}'),

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:kashflo_mobile/providers/shared_budget_detail_provider.dart';
 import 'package:kashflo_mobile/providers/shared_budgets_provider.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
@@ -12,6 +11,7 @@ import 'providers/recurrence_provider.dart';
 import 'providers/user_profile_provider.dart';
 import 'providers/currency_provider.dart';
 import 'providers/app_lock_provider.dart';
+import 'providers/theme_provider.dart';
 import 'routes/app_router.dart';
 import 'screens/lock/lock_screen.dart';
 
@@ -34,6 +34,7 @@ class KashFloApp extends StatelessWidget {
         // 1. AuthProvider — ne dépend de rien
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => AppLockProvider()..init()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()..init()),
 
         // 2. Providers dépendant seulement de AuthProvider
         ChangeNotifierProxyProvider<AuthProvider, TransactionProvider>(
@@ -76,19 +77,33 @@ class KashFloApp extends StatelessWidget {
           },
         ),
       ],
-      child: MaterialApp.router(
-        title: 'KashFlo',
-        theme: ThemeData(useMaterial3: true, colorSchemeSeed: kBrandGreen),
-        routerConfig: AppRouter.router,
-        builder: (context, child) {
-          return Consumer2<AppLockProvider, AuthProvider>(
-            builder: (context, appLock, auth, _) {
-              final shouldLock =
-                  auth.user != null &&
-                  !appLock.isLoading &&
-                  appLock.isEnabled &&
-                  appLock.isLocked;
-              return shouldLock ? const LockScreen() : child!;
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, _) {
+          return MaterialApp.router(
+            title: 'KashFlo',
+            theme: ThemeData(
+              useMaterial3: true,
+              colorSchemeSeed: kBrandGreen,
+              brightness: Brightness.light,
+            ),
+            darkTheme: ThemeData(
+              useMaterial3: true,
+              colorSchemeSeed: kBrandGreen,
+              brightness: Brightness.dark,
+            ),
+            themeMode: themeProvider.themeMode,
+            routerConfig: AppRouter.router,
+            builder: (context, child) {
+              return Consumer2<AppLockProvider, AuthProvider>(
+                builder: (context, appLock, auth, _) {
+                  final shouldLock =
+                      auth.user != null &&
+                      !appLock.isLoading &&
+                      appLock.isEnabled &&
+                      appLock.isLocked;
+                  return shouldLock ? const LockScreen() : child!;
+                },
+              );
             },
           );
         },
