@@ -61,6 +61,30 @@ class RecurrenceProvider extends ChangeNotifier {
     });
   }
 
+  Future<void> updateRecurrenceDetails(
+    String uid,
+    String id, {
+    required String type,
+    required String category,
+    required double amount,
+    required String label,
+    required String frequency,
+    int? customDays,
+    required DateTime nextOccurrence,
+  }) {
+    return _service.updateRecurrenceDetails(
+      uid,
+      id,
+      type: type,
+      category: category,
+      amount: amount,
+      label: label,
+      frequency: frequency,
+      customDays: customDays,
+      nextOccurrence: nextOccurrence,
+    );
+  }
+
   /// Génère les transactions en retard pour toutes les récurrences dues.
   /// Retourne le nombre de transactions créées.
   Future<int> generateDueTransactions(String uid) async {

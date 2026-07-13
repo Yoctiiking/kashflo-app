@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
@@ -29,7 +30,9 @@ class _RecurrencesScreenState extends State<RecurrencesScreen> {
     setState(() => _isGenerating = true);
 
     final uid = context.read<AuthProvider>().user!.uid;
-    final count = await context.read<RecurrenceProvider>().generateDueTransactions(uid);
+    final count = await context
+        .read<RecurrenceProvider>()
+        .generateDueTransactions(uid);
 
     if (!mounted) return;
     setState(() => _isGenerating = false);
@@ -42,6 +45,17 @@ class _RecurrencesScreenState extends State<RecurrencesScreen> {
               : 'Aucune transaction à générer — tout est à jour',
         ),
       ),
+    );
+  }
+
+  void _handleEditRecurrence(RecurrenceModel recurrence) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => AddRecurrenceSheet(recurrence: recurrence),
     );
   }
 
@@ -60,9 +74,10 @@ class _RecurrencesScreenState extends State<RecurrencesScreen> {
                   onPressed: _isGenerating ? null : _generate,
                   icon: _isGenerating
                       ? const SizedBox(
-                    height: 16, width: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
+                          height: 16,
+                          width: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
                       : const Icon(Icons.play_arrow, size: 18),
                   label: Text(hasDue ? 'Générer' : 'À jour'),
                 );
@@ -95,11 +110,18 @@ class _RecurrencesScreenState extends State<RecurrencesScreen> {
                 recurrence: recurrence,
                 onToggle: () {
                   final uid = context.read<AuthProvider>().user!.uid;
-                  context.read<RecurrenceProvider>().toggleRecurrence(uid, recurrence);
+                  context.read<RecurrenceProvider>().toggleRecurrence(
+                    uid,
+                    recurrence,
+                  );
                 },
+                onEdit: () => _handleEditRecurrence(recurrence),
                 onDelete: () {
                   final uid = context.read<AuthProvider>().user!.uid;
-                  context.read<RecurrenceProvider>().deleteRecurrence(uid, recurrence.id);
+                  context.read<RecurrenceProvider>().deleteRecurrence(
+                    uid,
+                    recurrence.id,
+                  );
                 },
               );
             },
@@ -125,11 +147,13 @@ class _RecurrencesScreenState extends State<RecurrencesScreen> {
 class _RecurrenceCard extends StatelessWidget {
   final RecurrenceModel recurrence;
   final VoidCallback onToggle;
+  final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   const _RecurrenceCard({
     required this.recurrence,
     required this.onToggle,
+    required this.onEdit,
     required this.onDelete,
   });
 
@@ -138,8 +162,8 @@ class _RecurrenceCard extends StatelessWidget {
     final currency = context.watch<CurrencyProvider>();
     final isExpense = recurrence.type == 'expense';
     final dateText = DateFormat('dd/MM/yyyy').format(recurrence.nextOccurrence);
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
+    final card = Card(
+      margin: EdgeInsets.zero,
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: isExpense
@@ -156,19 +180,85 @@ class _RecurrenceCard extends StatelessWidget {
           '${currency.formatCurrency(recurrence.amount)} · ${_frequencyLabels[recurrence.frequency]} · Prochaine: $dateText',
         ),
         isThreeLine: true,
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Switch(
-              value: recurrence.isActive,
-              onChanged: (_) => onToggle(),
-            ),
-            IconButton(
-              icon: const Icon(Icons.close, size: 20),
-              onPressed: onDelete,
-              visualDensity: VisualDensity.compact,
-            ),
-          ],
+        trailing: Switch(
+          value: recurrence.isActive,
+          onChanged: (_) => onToggle(),
+        ),
+      ),
+    );
+
+    final containerColor = Theme.of(context).colorScheme.surfaceContainerLow;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Container(
+        color: containerColor,
+        child: Slidable(
+          key: ValueKey(recurrence.id),
+          startActionPane: ActionPane(
+            motion: const DrawerMotion(),
+            extentRatio: 0.22,
+            children: [
+              CustomSlidableAction(
+                onPressed: (_) => onEdit(),
+                backgroundColor: containerColor,
+                child: const _CircleActionIcon(
+                  color: Colors.blue,
+                  icon: Icons.edit_outlined,
+                  maxRatio: 0.22,
+                ),
+              ),
+            ],
+          ),
+          endActionPane: ActionPane(
+            motion: const DrawerMotion(),
+            extentRatio: 0.22,
+            children: [
+              CustomSlidableAction(
+                onPressed: (_) => onDelete(),
+                backgroundColor: containerColor,
+                child: const _CircleActionIcon(
+                  color: Colors.red,
+                  icon: Icons.delete_outline,
+                  maxRatio: 0.22,
+                ),
+              ),
+            ],
+          ),
+          child: card,
+        ),
+      ),
+    );
+  }
+}
+
+class _CircleActionIcon extends StatelessWidget {
+  final Color color;
+  final IconData icon;
+  final double maxRatio;
+
+  const _CircleActionIcon({
+    required this.color,
+    required this.icon,
+    required this.maxRatio,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final animation = Slidable.of(context)!.animation;
+    return Center(
+      child: AnimatedBuilder(
+        animation: animation,
+        builder: (context, child) {
+          final progress = (animation.value / maxRatio).clamp(0.0, 1.0);
+          final scale = 0.03 + 0.97 * progress;
+          return Transform.scale(scale: scale, child: child);
+        },
+        child: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          child: Icon(icon, color: Colors.white, size: 20),
         ),
       ),
     );

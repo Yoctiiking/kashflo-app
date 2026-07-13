@@ -46,6 +46,22 @@ class BudgetProvider extends ChangeNotifier {
     return _service.deleteBudget(uid, budgetId);
   }
 
+  Future<void> updateBudgetDetails(
+    String uid,
+    String budgetId, {
+    required String category,
+    required double limit,
+    required String period,
+  }) {
+    return _service.updateBudgetDetails(
+      uid,
+      budgetId,
+      category: category,
+      limit: limit,
+      period: period,
+    );
+  }
+
   /// Calcule le montant dépensé pour un budget donné, sur la période
   /// calendaire correspondante (jour / semaine ISO / mois civil),
   /// à partir de TOUTES les transactions de l'utilisateur (pas seulement

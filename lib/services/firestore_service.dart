@@ -23,9 +23,9 @@ class FirestoreService {
         .snapshots()
         .map(
           (snap) => snap.docs
-          .map((doc) => TransactionModel.fromFirestore(doc))
-          .toList(),
-    );
+              .map((doc) => TransactionModel.fromFirestore(doc))
+              .toList(),
+        );
   }
 
   Future<void> addTransaction(String uid, TransactionModel tx) {
@@ -36,11 +36,29 @@ class FirestoreService {
     return _transactionsRef(uid).doc(txId).delete();
   }
 
+  Future<void> updateTransactionDetails(
+    String uid,
+    String txId, {
+    required String type,
+    required String category,
+    required double amount,
+    required String label,
+    required DateTime date,
+  }) {
+    return _transactionsRef(uid).doc(txId).update({
+      'type': type,
+      'category': category,
+      'amount': amount,
+      'label': label,
+      'date': Timestamp.fromDate(date),
+    });
+  }
+
   Future<List<TransactionModel>> getMonthTransactions(
-      String uid,
-      int year,
-      int month,
-      ) async {
+    String uid,
+    int year,
+    int month,
+  ) async {
     final startOfMonth = DateTime(year, month, 1);
     final endOfMonth = DateTime(year, month + 1, 1);
 
@@ -59,7 +77,7 @@ class FirestoreService {
   // Budgets
   Stream<List<BudgetModel>> watchBudgets(String uid) {
     return _budgetsRef(uid).snapshots().map(
-          (snap) => snap.docs.map((doc) => BudgetModel.fromFirestore(doc)).toList(),
+      (snap) => snap.docs.map((doc) => BudgetModel.fromFirestore(doc)).toList(),
     );
   }
 
@@ -71,6 +89,20 @@ class FirestoreService {
     return _budgetsRef(uid).doc(budgetId).delete();
   }
 
+  Future<void> updateBudgetDetails(
+    String uid,
+    String budgetId, {
+    required String category,
+    required double limit,
+    required String period,
+  }) {
+    return _budgetsRef(uid).doc(budgetId).update({
+      'category': category,
+      'limit': limit,
+      'period': period,
+    });
+  }
+
   // Recurrences
   Stream<List<RecurrenceModel>> watchRecurrences(String uid) {
     return _recurrencesRef(uid)
@@ -78,9 +110,9 @@ class FirestoreService {
         .snapshots()
         .map(
           (snap) => snap.docs
-          .map((doc) => RecurrenceModel.fromFirestore(doc))
-          .toList(),
-    );
+              .map((doc) => RecurrenceModel.fromFirestore(doc))
+              .toList(),
+        );
   }
 
   Future<void> addRecurrence(String uid, RecurrenceModel recurrence) {
@@ -92,18 +124,40 @@ class FirestoreService {
   }
 
   Future<void> updateRecurrence(
-      String uid,
-      String id,
-      Map<String, dynamic> data,
-      ) {
+    String uid,
+    String id,
+    Map<String, dynamic> data,
+  ) {
     return _recurrencesRef(uid).doc(id).update(data);
   }
 
+  Future<void> updateRecurrenceDetails(
+    String uid,
+    String id, {
+    required String type,
+    required String category,
+    required double amount,
+    required String label,
+    required String frequency,
+    int? customDays,
+    required DateTime nextOccurrence,
+  }) {
+    return _recurrencesRef(uid).doc(id).update({
+      'type': type,
+      'category': category,
+      'amount': amount,
+      'label': label,
+      'frequency': frequency,
+      'customDays': customDays,
+      'nextOccurrence': Timestamp.fromDate(nextOccurrence),
+    });
+  }
+
   Future<void> updateRecurrenceNextOccurrence(
-      String uid,
-      String recurrenceId,
-      DateTime nextOccurrence,
-      ) {
+    String uid,
+    String recurrenceId,
+    DateTime nextOccurrence,
+  ) {
     return _recurrencesRef(uid).doc(recurrenceId).update({
       'nextOccurrence': Timestamp.fromDate(nextOccurrence),
     });
@@ -117,13 +171,17 @@ class FirestoreService {
   }
 
   Stream<UserProfileModel?> watchUserProfile(String uid) {
-    return _db.collection('users').doc(uid).snapshots().map(
-          (doc) => doc.exists ? UserProfileModel.fromFirestore(doc) : null,
-    );
+    return _db
+        .collection('users')
+        .doc(uid)
+        .snapshots()
+        .map((doc) => doc.exists ? UserProfileModel.fromFirestore(doc) : null);
   }
 
   Future<void> updateDisplayName(String uid, String displayName) {
-    return _db.collection('users').doc(uid).update({'displayName': displayName});
+    return _db.collection('users').doc(uid).update({
+      'displayName': displayName,
+    });
   }
 
   Future<void> updateUserCurrency(String uid, String currency) {

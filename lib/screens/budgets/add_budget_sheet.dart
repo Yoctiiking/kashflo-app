@@ -25,7 +25,10 @@ const _periods = {
 };
 
 class AddBudgetSheet extends StatefulWidget {
-  const AddBudgetSheet({super.key});
+  /// Si fourni, le formulaire s'ouvre en mode édition pour ce budget.
+  final BudgetModel? budget;
+
+  const AddBudgetSheet({super.key, this.budget});
 
   @override
   State<AddBudgetSheet> createState() => _AddBudgetSheetState();
@@ -36,13 +39,33 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
   final _limitController = TextEditingController();
 
   String? _category;
-  String _period = 'monthly';
+  late String _period;
   bool _isSaving = false;
+  bool _limitInitialized = false;
+
+  bool get _isEditing => widget.budget != null;
+
+  @override
+  void initState() {
+    super.initState();
+    _category = widget.budget?.category;
+    _period = widget.budget?.period ?? 'monthly';
+  }
 
   @override
   void dispose() {
     _limitController.dispose();
     super.dispose();
+  }
+
+  /// Pré-remplit la limite convertie dans la devise d'affichage,
+  /// une fois que CurrencyProvider a fini de charger le taux (ready).
+  void _prefillLimitIfNeeded(CurrencyProvider currency) {
+    if (_limitInitialized || !_isEditing || !currency.ready) return;
+    _limitController.text = currency
+        .fromBase(widget.budget!.limit)
+        .toStringAsFixed(2);
+    _limitInitialized = true;
   }
 
   Future<void> _submit() async {
@@ -60,15 +83,28 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
     final uid = context.read<AuthProvider>().user!.uid;
     final currency = context.read<CurrencyProvider>();
     final enteredLimit = double.parse(_limitController.text.replaceAll(',', '.'));
-    final budget = BudgetModel(
-      id: '',
-      category: _category!,
-      limit: currency.toBase(enteredLimit),
-      period: _period,
-      createdAt: DateTime.now(),
-    );
+    final limitInBase = currency.toBase(enteredLimit);
 
-    await context.read<BudgetProvider>().addBudget(uid, budget);
+    final provider = context.read<BudgetProvider>();
+
+    if (_isEditing) {
+      await provider.updateBudgetDetails(
+        uid,
+        widget.budget!.id,
+        category: _category!,
+        limit: limitInBase,
+        period: _period,
+      );
+    } else {
+      final budget = BudgetModel(
+        id: '',
+        category: _category!,
+        limit: limitInBase,
+        period: _period,
+        createdAt: DateTime.now(),
+      );
+      await provider.addBudget(uid, budget);
+    }
 
     if (!mounted) return;
     Navigator.pop(context);
@@ -77,6 +113,7 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
   @override
   Widget build(BuildContext context) {
     final currency = context.watch<CurrencyProvider>();
+    _prefillLimitIfNeeded(currency);
     return Padding(
       padding: EdgeInsets.only(
         left: 20, right: 20, top: 20,
@@ -98,7 +135,10 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
                 ),
               ),
             ),
-            Text('Nouveau budget', style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              _isEditing ? 'Modifier le budget' : 'Nouveau budget',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               initialValue: _category,
@@ -143,7 +183,7 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
                 height: 20, width: 20,
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
-                  : const Text('Créer le budget'),
+                  : Text(_isEditing ? 'Sauvegarder' : 'Créer le budget'),
             ),
           ],
         ),

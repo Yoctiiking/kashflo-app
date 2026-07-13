@@ -6,13 +6,30 @@ import '../../providers/transaction_provider.dart';
 import '../../models/transaction_model.dart';
 
 const _expenseCategories = [
-  'Alimentation', 'Transport', 'Logement', 'Santé', 'Loisirs',
-  'Vêtements', 'Abonnements', 'Restaurants', 'Éducation', 'Autre',
+  'Alimentation',
+  'Transport',
+  'Logement',
+  'Santé',
+  'Loisirs',
+  'Vêtements',
+  'Abonnements',
+  'Restaurants',
+  'Éducation',
+  'Autre',
 ];
-const _incomeCategories = ['Salaire', 'Freelance', 'Investissements', 'Remboursement', 'Autre'];
+const _incomeCategories = [
+  'Salaire',
+  'Freelance',
+  'Investissements',
+  'Remboursement',
+  'Autre',
+];
 
 class AddTransactionSheet extends StatefulWidget {
-  const AddTransactionSheet({super.key});
+  /// Si fournie, le formulaire s'ouvre en mode édition pour cette transaction.
+  final TransactionModel? transaction;
+
+  const AddTransactionSheet({super.key, this.transaction});
 
   @override
   State<AddTransactionSheet> createState() => _AddTransactionSheetState();
@@ -21,12 +38,26 @@ class AddTransactionSheet extends StatefulWidget {
 class _AddTransactionSheetState extends State<AddTransactionSheet> {
   final _formKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
-  final _labelController = TextEditingController(); // renommé depuis _descriptionController
+  late final TextEditingController
+  _labelController; // renommé depuis _descriptionController
 
-  String _type = 'expense';
+  late String _type;
   String? _category;
-  DateTime _date = DateTime.now();
+  late DateTime _date;
   bool _isSaving = false;
+  bool _amountInitialized = false;
+
+  bool get _isEditing => widget.transaction != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final tx = widget.transaction;
+    _type = tx?.type ?? 'expense';
+    _category = tx?.category;
+    _date = tx?.date ?? DateTime.now();
+    _labelController = TextEditingController(text: tx?.label ?? '');
+  }
 
   @override
   void dispose() {
@@ -37,6 +68,16 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
 
   List<String> get _categories =>
       _type == 'expense' ? _expenseCategories : _incomeCategories;
+
+  /// Pré-remplit le montant converti dans la devise d'affichage,
+  /// une fois que CurrencyProvider a fini de charger le taux (ready).
+  void _prefillAmountIfNeeded(CurrencyProvider currency) {
+    if (_amountInitialized || !_isEditing || !currency.ready) return;
+    _amountController.text = currency
+        .fromBase(widget.transaction!.amount)
+        .toStringAsFixed(2);
+    _amountInitialized = true;
+  }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate() || _category == null) {
@@ -52,19 +93,36 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
 
     final uid = context.read<AuthProvider>().user!.uid;
     final currency = context.read<CurrencyProvider>();
-    final enteredAmount = double.parse(_amountController.text.replaceAll(',', '.'));
-    final tx = TransactionModel(
-      id: '',
-      type: _type,
-      category: _category!,
-      amount: currency.toBase(enteredAmount),
-      label: _labelController.text.trim(),
-      date: _date,
-      addedBy: uid,
-      createdAt: DateTime.now(),
+    final enteredAmount = double.parse(
+      _amountController.text.replaceAll(',', '.'),
     );
+    final amountInBase = currency.toBase(enteredAmount);
 
-    await context.read<TransactionProvider>().addTransaction(uid, tx);
+    final provider = context.read<TransactionProvider>();
+
+    if (_isEditing) {
+      await provider.updateTransactionDetails(
+        uid,
+        widget.transaction!.id,
+        type: _type,
+        category: _category!,
+        amount: amountInBase,
+        label: _labelController.text.trim(),
+        date: _date,
+      );
+    } else {
+      final tx = TransactionModel(
+        id: '',
+        type: _type,
+        category: _category!,
+        amount: amountInBase,
+        label: _labelController.text.trim(),
+        date: _date,
+        addedBy: uid,
+        createdAt: DateTime.now(),
+      );
+      await provider.addTransaction(uid, tx);
+    }
 
     if (!mounted) return;
     Navigator.pop(context);
@@ -73,9 +131,12 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   @override
   Widget build(BuildContext context) {
     final currency = context.watch<CurrencyProvider>();
+    _prefillAmountIfNeeded(currency);
     return Padding(
       padding: EdgeInsets.only(
-        left: 20, right: 20, top: 20,
+        left: 20,
+        right: 20,
+        top: 20,
         bottom: MediaQuery.of(context).viewInsets.bottom + 20,
       ),
       child: Form(
@@ -86,7 +147,8 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
           children: [
             Center(
               child: Container(
-                width: 40, height: 4,
+                width: 40,
+                height: 4,
                 margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade300,
@@ -94,7 +156,10 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                 ),
               ),
             ),
-            Text('Nouvelle transaction', style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              _isEditing ? 'Modifier la transaction' : 'Nouvelle transaction',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             const SizedBox(height: 16),
             SegmentedButton<String>(
               segments: const [
@@ -113,14 +178,21 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
             DropdownButtonFormField<String>(
               initialValue: _category,
               decoration: const InputDecoration(labelText: 'Catégorie'),
-              items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+              items: _categories
+                  .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                  .toList(),
               onChanged: (value) => setState(() => _category = value),
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _amountController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: InputDecoration(labelText: 'Montant', prefixText: '${currency.symbol} '),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              decoration: InputDecoration(
+                labelText: 'Montant',
+                prefixText: '${currency.symbol} ',
+              ),
               validator: (value) {
                 if (value == null || value.isEmpty) return 'Montant requis';
                 final parsed = double.tryParse(value.replaceAll(',', '.'));
@@ -132,20 +204,25 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
             TextFormField(
               controller: _labelController,
               decoration: const InputDecoration(labelText: 'Description'),
-              validator: (value) => (value == null || value.isEmpty) ? 'Description requise' : null,
+              validator: (value) => (value == null || value.isEmpty)
+                  ? 'Description requise'
+                  : null,
             ),
             const SizedBox(height: 16),
             InkWell(
               onTap: () async {
                 final picked = await showDatePicker(
-                  context: context, initialDate: _date,
-                  firstDate: DateTime(2020), lastDate: DateTime.now(),
+                  context: context,
+                  initialDate: _date,
+                  firstDate: DateTime(2020),
+                  lastDate: DateTime.now(),
                 );
                 if (picked != null) setState(() => _date = picked);
               },
               child: InputDecorator(
                 decoration: const InputDecoration(
-                  labelText: 'Date', prefixIcon: Icon(Icons.calendar_today_outlined),
+                  labelText: 'Date',
+                  prefixIcon: Icon(Icons.calendar_today_outlined),
                 ),
                 child: Text('${_date.day}/${_date.month}/${_date.year}'),
               ),
@@ -153,10 +230,16 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
             const SizedBox(height: 24),
             FilledButton(
               onPressed: _isSaving ? null : _submit,
-              style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
               child: _isSaving
-                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Text('Ajouter'),
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(_isEditing ? 'Sauvegarder' : 'Ajouter'),
             ),
           ],
         ),

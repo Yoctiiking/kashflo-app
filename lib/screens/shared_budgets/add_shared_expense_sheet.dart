@@ -141,7 +141,7 @@ class _AddSharedExpenseSheetState extends State<AddSharedExpenseSheet> {
               ),
               decoration: InputDecoration(
                 labelText: 'Montant',
-                prefixText: currency.symbol,
+                prefixText: '${currency.symbol} ',
               ),
               validator: (value) {
                 if (value == null || value.isEmpty) return 'Montant requis';

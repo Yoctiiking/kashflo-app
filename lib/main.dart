@@ -13,6 +13,8 @@ import 'providers/user_profile_provider.dart';
 import 'providers/currency_provider.dart';
 import 'routes/app_router.dart';
 
+const kBrandGreen = Color(0xFF0D2B26);
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
@@ -71,7 +73,7 @@ class KashFloApp extends StatelessWidget {
         title: 'KashFlo',
         theme: ThemeData(
           useMaterial3: true,
-          colorSchemeSeed: Colors.teal,
+          colorSchemeSeed: kBrandGreen,
         ),
         routerConfig: AppRouter.router,
       ),

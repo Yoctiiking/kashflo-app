@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
@@ -47,9 +48,18 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                 child: SegmentedButton<TransactionFilter>(
                   showSelectedIcon: false,
                   segments: const [
-                    ButtonSegment(value: TransactionFilter.all, label: Text('Tout')),
-                    ButtonSegment(value: TransactionFilter.expense, label: Text('Dépenses')),
-                    ButtonSegment(value: TransactionFilter.income, label: Text('Revenus')),
+                    ButtonSegment(
+                      value: TransactionFilter.all,
+                      label: Text('Tout'),
+                    ),
+                    ButtonSegment(
+                      value: TransactionFilter.expense,
+                      label: Text('Dépenses'),
+                    ),
+                    ButtonSegment(
+                      value: TransactionFilter.income,
+                      label: Text('Revenus'),
+                    ),
                   ],
                   selected: {_filter},
                   onSelectionChanged: (selection) {
@@ -60,41 +70,43 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
               Expanded(
                 child: filtered.isEmpty
                     ? Center(
-                  child: Text(
-                    'Aucune transaction',
-                    style: TextStyle(color: Colors.grey.shade600),
-                  ),
-                )
-                    : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: filtered.length,
-                  itemBuilder: (context, index) {
-                    final tx = filtered[index];
-                    return Dismissible(
-                      key: Key(tx.id),
-                      direction: DismissDirection.endToStart,
-                      background: Container(
-                        alignment: Alignment.centerRight,
-                        padding: const EdgeInsets.only(right: 20),
-                        margin: const EdgeInsets.only(bottom: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.red,
-                          borderRadius: BorderRadius.circular(12),
+                        child: Text(
+                          'Aucune transaction',
+                          style: TextStyle(color: Colors.grey.shade600),
                         ),
-                        child: const Icon(Icons.delete, color: Colors.white),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: filtered.length,
+                        itemBuilder: (context, index) {
+                          final tx = filtered[index];
+                          return _TransactionCard(
+                            transaction: tx,
+                            onEdit: () => showModalBottomSheet(
+                              context: context,
+                              isScrollControlled: true,
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.vertical(
+                                  top: Radius.circular(20),
+                                ),
+                              ),
+                              builder: (_) =>
+                                  AddTransactionSheet(transaction: tx),
+                            ),
+                            onDelete: () async {
+                              final confirmed = await _confirmDelete(context);
+                              if (!confirmed || !context.mounted) return;
+                              final uid = context
+                                  .read<AuthProvider>()
+                                  .user!
+                                  .uid;
+                              context
+                                  .read<TransactionProvider>()
+                                  .deleteTransaction(uid, tx.id);
+                            },
+                          );
+                        },
                       ),
-                      confirmDismiss: (_) => _confirmDelete(context),
-                      onDismissed: (_) {
-                        final uid = context.read<AuthProvider>().user!.uid;
-                        context.read<TransactionProvider>()
-                            .deleteTransaction(uid, tx.id);
-                      },
-                      child: _TransactionCard(
-                        transaction: tx,
-                      ),
-                    );
-                  },
-                ),
               ),
             ],
           );
@@ -139,9 +151,13 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
 
 class _TransactionCard extends StatelessWidget {
   final TransactionModel transaction;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
   const _TransactionCard({
     required this.transaction,
+    required this.onEdit,
+    required this.onDelete,
   });
 
   @override
@@ -152,8 +168,8 @@ class _TransactionCard extends StatelessWidget {
         '${isExpense ? '-' : '+'}${currency.formatCurrency(transaction.amount)}';
     final dateText = DateFormat('dd/MM/yyyy').format(transaction.date);
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
+    final card = Card(
+      margin: EdgeInsets.zero,
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: isExpense
@@ -173,6 +189,82 @@ class _TransactionCard extends StatelessWidget {
             fontWeight: FontWeight.bold,
             color: isExpense ? Colors.red : Colors.green,
           ),
+        ),
+      ),
+    );
+
+    final containerColor = Theme.of(context).scaffoldBackgroundColor;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Container(
+        color: containerColor,
+        child: Slidable(
+          key: ValueKey(transaction.id),
+          startActionPane: ActionPane(
+            motion: const DrawerMotion(),
+            extentRatio: 0.22,
+            children: [
+              CustomSlidableAction(
+                onPressed: (_) => onEdit(),
+                backgroundColor: containerColor,
+                child: const _CircleActionIcon(
+                  color: Colors.blue,
+                  icon: Icons.edit_outlined,
+                  maxRatio: 0.22,
+                ),
+              ),
+            ],
+          ),
+          endActionPane: ActionPane(
+            motion: const DrawerMotion(),
+            extentRatio: 0.22,
+            children: [
+              CustomSlidableAction(
+                onPressed: (_) => onDelete(),
+                backgroundColor: containerColor,
+                child: const _CircleActionIcon(
+                  color: Colors.red,
+                  icon: Icons.delete_outline,
+                  maxRatio: 0.22,
+                ),
+              ),
+            ],
+          ),
+          child: card,
+        ),
+      ),
+    );
+  }
+}
+
+class _CircleActionIcon extends StatelessWidget {
+  final Color color;
+  final IconData icon;
+  final double maxRatio;
+
+  const _CircleActionIcon({
+    required this.color,
+    required this.icon,
+    required this.maxRatio,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final animation = Slidable.of(context)!.animation;
+    return Center(
+      child: AnimatedBuilder(
+        animation: animation,
+        builder: (context, child) {
+          final progress = (animation.value / maxRatio).clamp(0.0, 1.0);
+          final scale = 0.03 + 0.97 * progress;
+          return Transform.scale(scale: scale, child: child);
+        },
+        child: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          child: Icon(icon, color: Colors.white, size: 20),
         ),
       ),
     );

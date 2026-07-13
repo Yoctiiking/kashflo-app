@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
@@ -51,6 +52,16 @@ class BudgetsScreen extends StatelessWidget {
               return _BudgetCard(
                 budget: budget,
                 spent: spent,
+                onEdit: () => showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(20),
+                    ),
+                  ),
+                  builder: (_) => AddBudgetSheet(budget: budget),
+                ),
                 onDelete: () {
                   final uid = context.read<AuthProvider>().user!.uid;
                   context.read<BudgetProvider>().deleteBudget(uid, budget.id);
@@ -79,11 +90,13 @@ class BudgetsScreen extends StatelessWidget {
 class _BudgetCard extends StatelessWidget {
   final BudgetModel budget;
   final double spent;
+  final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   const _BudgetCard({
     required this.budget,
     required this.spent,
+    required this.onEdit,
     required this.onDelete,
   });
 
@@ -108,41 +121,27 @@ class _BudgetCard extends StatelessWidget {
     final isOverBudget = spent > budget.limit;
     final overAmount = spent - budget.limit;
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+    final card = Card(
+      margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
               children: [
-                Expanded(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
-                    children: [
-                      Text(
-                        budget.category,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w600),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        _periodLabel,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                    ],
+                Text(
+                  budget.category,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.close, size: 20),
-                  onPressed: onDelete,
-                  visualDensity: VisualDensity.compact,
+                const SizedBox(width: 6),
+                Text(
+                  _periodLabel,
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                 ),
               ],
             ),
@@ -186,6 +185,82 @@ class _BudgetCard extends StatelessWidget {
               ),
             ],
           ],
+        ),
+      ),
+    );
+
+    final containerColor = Theme.of(context).scaffoldBackgroundColor;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Container(
+        color: containerColor,
+        child: Slidable(
+          key: ValueKey(budget.id),
+          startActionPane: ActionPane(
+            motion: const DrawerMotion(),
+            extentRatio: 0.22,
+            children: [
+              CustomSlidableAction(
+                onPressed: (_) => onEdit(),
+                backgroundColor: containerColor,
+                child: const _CircleActionIcon(
+                  color: Colors.blue,
+                  icon: Icons.edit_outlined,
+                  maxRatio: 0.22,
+                ),
+              ),
+            ],
+          ),
+          endActionPane: ActionPane(
+            motion: const DrawerMotion(),
+            extentRatio: 0.22,
+            children: [
+              CustomSlidableAction(
+                onPressed: (_) => onDelete(),
+                backgroundColor: containerColor,
+                child: const _CircleActionIcon(
+                  color: Colors.red,
+                  icon: Icons.delete_outline,
+                  maxRatio: 0.22,
+                ),
+              ),
+            ],
+          ),
+          child: card,
+        ),
+      ),
+    );
+  }
+}
+
+class _CircleActionIcon extends StatelessWidget {
+  final Color color;
+  final IconData icon;
+  final double maxRatio;
+
+  const _CircleActionIcon({
+    required this.color,
+    required this.icon,
+    required this.maxRatio,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final animation = Slidable.of(context)!.animation;
+    return Center(
+      child: AnimatedBuilder(
+        animation: animation,
+        builder: (context, child) {
+          final progress = (animation.value / maxRatio).clamp(0.0, 1.0);
+          final scale = 0.03 + 0.97 * progress;
+          return Transform.scale(scale: scale, child: child);
+        },
+        child: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          child: Icon(icon, color: Colors.white, size: 20),
         ),
       ),
     );

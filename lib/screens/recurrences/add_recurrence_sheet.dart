@@ -20,7 +20,10 @@ const _frequencies = {
 };
 
 class AddRecurrenceSheet extends StatefulWidget {
-  const AddRecurrenceSheet({super.key});
+  /// Si fournie, le formulaire s'ouvre en mode édition pour cette récurrence.
+  final RecurrenceModel? recurrence;
+
+  const AddRecurrenceSheet({super.key, this.recurrence});
 
   @override
   State<AddRecurrenceSheet> createState() => _AddRecurrenceSheetState();
@@ -29,14 +32,31 @@ class AddRecurrenceSheet extends StatefulWidget {
 class _AddRecurrenceSheetState extends State<AddRecurrenceSheet> {
   final _formKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
-  final _labelController = TextEditingController();
-  final _customDaysController = TextEditingController();
+  late final TextEditingController _labelController;
+  late final TextEditingController _customDaysController;
 
-  String _type = 'expense';
+  late String _type;
   String? _category;
-  String _frequency = 'monthly';
-  DateTime _nextOccurrence = DateTime.now();
+  late String _frequency;
+  late DateTime _nextOccurrence;
   bool _isSaving = false;
+  bool _amountInitialized = false;
+
+  bool get _isEditing => widget.recurrence != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final recurrence = widget.recurrence;
+    _type = recurrence?.type ?? 'expense';
+    _category = recurrence?.category;
+    _frequency = recurrence?.frequency ?? 'monthly';
+    _nextOccurrence = recurrence?.nextOccurrence ?? DateTime.now();
+    _labelController = TextEditingController(text: recurrence?.label ?? '');
+    _customDaysController = TextEditingController(
+      text: recurrence?.customDays?.toString() ?? '',
+    );
+  }
 
   @override
   void dispose() {
@@ -48,6 +68,16 @@ class _AddRecurrenceSheetState extends State<AddRecurrenceSheet> {
 
   List<String> get _categories =>
       _type == 'expense' ? _expenseCategories : _incomeCategories;
+
+  /// Pré-remplit le montant converti dans la devise d'affichage,
+  /// une fois que CurrencyProvider a fini de charger le taux (ready).
+  void _prefillAmountIfNeeded(CurrencyProvider currency) {
+    if (_amountInitialized || !_isEditing || !currency.ready) return;
+    _amountController.text = currency
+        .fromBase(widget.recurrence!.amount)
+        .toStringAsFixed(2);
+    _amountInitialized = true;
+  }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate() || _category == null) {
@@ -64,22 +94,40 @@ class _AddRecurrenceSheetState extends State<AddRecurrenceSheet> {
     final uid = context.read<AuthProvider>().user!.uid;
     final currency = context.read<CurrencyProvider>();
     final enteredAmount = double.parse(_amountController.text.replaceAll(',', '.'));
-    final recurrence = RecurrenceModel(
-      id: '',
-      type: _type,
-      category: _category!,
-      amount: currency.toBase(enteredAmount),
-      label: _labelController.text.trim(),
-      frequency: _frequency,
-      customDays: _frequency == 'custom'
-          ? int.tryParse(_customDaysController.text)
-          : null,
-      nextOccurrence: _nextOccurrence,
-      isActive: true,
-      createdAt: DateTime.now(),
-    );
+    final amountInBase = currency.toBase(enteredAmount);
+    final customDays = _frequency == 'custom'
+        ? int.tryParse(_customDaysController.text)
+        : null;
 
-    await context.read<RecurrenceProvider>().addRecurrence(uid, recurrence);
+    final provider = context.read<RecurrenceProvider>();
+
+    if (_isEditing) {
+      await provider.updateRecurrenceDetails(
+        uid,
+        widget.recurrence!.id,
+        type: _type,
+        category: _category!,
+        amount: amountInBase,
+        label: _labelController.text.trim(),
+        frequency: _frequency,
+        customDays: customDays,
+        nextOccurrence: _nextOccurrence,
+      );
+    } else {
+      final recurrence = RecurrenceModel(
+        id: '',
+        type: _type,
+        category: _category!,
+        amount: amountInBase,
+        label: _labelController.text.trim(),
+        frequency: _frequency,
+        customDays: customDays,
+        nextOccurrence: _nextOccurrence,
+        isActive: true,
+        createdAt: DateTime.now(),
+      );
+      await provider.addRecurrence(uid, recurrence);
+    }
 
     if (!mounted) return;
     Navigator.pop(context);
@@ -88,6 +136,7 @@ class _AddRecurrenceSheetState extends State<AddRecurrenceSheet> {
   @override
   Widget build(BuildContext context) {
     final currency = context.watch<CurrencyProvider>();
+    _prefillAmountIfNeeded(currency);
     return Padding(
       padding: EdgeInsets.only(
         left: 20, right: 20, top: 20,
@@ -109,7 +158,10 @@ class _AddRecurrenceSheetState extends State<AddRecurrenceSheet> {
                 ),
               ),
             ),
-            Text('Nouvelle récurrence', style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              _isEditing ? 'Modifier la récurrence' : 'Nouvelle récurrence',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             const SizedBox(height: 16),
             SegmentedButton<String>(
               segments: const [
@@ -181,7 +233,7 @@ class _AddRecurrenceSheetState extends State<AddRecurrenceSheet> {
               onTap: () async {
                 final picked = await showDatePicker(
                   context: context, initialDate: _nextOccurrence,
-                  firstDate: DateTime.now(), lastDate: DateTime(2100),
+                  firstDate: DateTime(2020), lastDate: DateTime(2100),
                 );
                 if (picked != null) setState(() => _nextOccurrence = picked);
               },
@@ -198,7 +250,7 @@ class _AddRecurrenceSheetState extends State<AddRecurrenceSheet> {
               style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
               child: _isSaving
                   ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Text('Créer la récurrence'),
+                  : Text(_isEditing ? 'Sauvegarder' : 'Créer la récurrence'),
             ),
           ],
         ),

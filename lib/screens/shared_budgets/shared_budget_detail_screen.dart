@@ -127,7 +127,7 @@ class _SharedBudgetDetailScreenState extends State<SharedBudgetDetailScreen> {
     }
   }
 
-  Future<void> _handleAddExpensePressed() async   {
+  Future<void> _handleAddExpensePressed() async {
     final detailProvider = context.read<SharedBudgetDetailProvider>();
 
     final choice = await showModalBottomSheet<AddExpenseChoice>(
@@ -418,26 +418,20 @@ class _SharedBudgetDetailScreenState extends State<SharedBudgetDetailScreen> {
               // Dépenses
               Card(
                 child: Padding(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Padding(
-                            padding: const EdgeInsets.all(8),
-                            child: const Text(
-                              'Dépenses',
-                              style: TextStyle(fontWeight: FontWeight.w600),
-                            ),
+                          const Text(
+                            'Dépenses',
+                            style: TextStyle(fontWeight: FontWeight.w600),
                           ),
-                          Padding(
-                            padding: const EdgeInsets.all(8),
-                            child: TextButton(
-                              onPressed: () => _handleAddExpensePressed(),
-                              child: const Text('+ Ajouter'),
-                            ),
+                          TextButton(
+                            onPressed: () => _handleAddExpensePressed(),
+                            child: const Text('+ Ajouter'),
                           ),
                         ],
                       ),
@@ -458,9 +452,15 @@ class _SharedBudgetDetailScreenState extends State<SharedBudgetDetailScreen> {
                           ).format(expense.date);
                           final isOwner = expense.addedBy == uid;
 
+                          final containerColor = Theme.of(
+                            context,
+                          ).colorScheme.surfaceContainerLow;
+
                           final card = Card(
                             margin: EdgeInsets.zero,
-                            shape: const RoundedRectangleBorder(),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
                             child: Padding(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 16,
@@ -506,49 +506,62 @@ class _SharedBudgetDetailScreenState extends State<SharedBudgetDetailScreen> {
 
                           final item = !isOwner
                               ? card
-                              : Slidable(
-                                  key: ValueKey(expense.id),
-                                  startActionPane: ActionPane(
-                                    motion: const DrawerMotion(),
-                                    extentRatio: 0.25,
-                                    children: [
-                                      SlidableAction(
-                                        onPressed: (_) =>
-                                            _handleEditExpense(expense),
-                                        backgroundColor: Colors.blue,
-                                        foregroundColor: Colors.white,
-                                        icon: Icons.edit_outlined,
-                                        label: 'Modifier',
-                                      ),
-                                    ],
+                              : Container(
+                                  color: containerColor,
+                                  child: Slidable(
+                                    key: ValueKey(expense.id),
+                                    startActionPane: ActionPane(
+                                      motion: const DrawerMotion(),
+                                      extentRatio: 0.22,
+                                      children: [
+                                        CustomSlidableAction(
+                                          onPressed: (_) =>
+                                              _handleEditExpense(expense),
+                                          backgroundColor: containerColor,
+                                          child: const _CircleActionIcon(
+                                            color: Colors.blue,
+                                            icon: Icons.edit_outlined,
+                                            maxRatio: 0.22,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    endActionPane: ActionPane(
+                                      motion: const DrawerMotion(),
+                                      extentRatio: 0.4,
+                                      children: [
+                                        CustomSlidableAction(
+                                          onPressed: (_) => context
+                                              .read<
+                                                SharedBudgetDetailProvider
+                                              >()
+                                              .unshareExpense(expense),
+                                          backgroundColor: containerColor,
+                                          child: const _CircleActionIcon(
+                                            color: Colors.orange,
+                                            icon: Icons.call_split,
+                                            maxRatio: 0.4,
+                                          ),
+                                        ),
+                                        CustomSlidableAction(
+                                          onPressed: (_) => context
+                                              .read<
+                                                SharedBudgetDetailProvider
+                                              >()
+                                              .deleteExpensePermanently(
+                                                expense.id,
+                                              ),
+                                          backgroundColor: containerColor,
+                                          child: const _CircleActionIcon(
+                                            color: Colors.red,
+                                            icon: Icons.delete_outline,
+                                            maxRatio: 0.4,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    child: card,
                                   ),
-                                  endActionPane: ActionPane(
-                                    motion: const DrawerMotion(),
-                                    extentRatio: 0.5,
-                                    children: [
-                                      SlidableAction(
-                                        onPressed: (_) => context
-                                            .read<SharedBudgetDetailProvider>()
-                                            .unshareExpense(expense),
-                                        backgroundColor: Colors.orange,
-                                        foregroundColor: Colors.white,
-                                        icon: Icons.call_split,
-                                        label: 'Désolid.',
-                                      ),
-                                      SlidableAction(
-                                        onPressed: (_) => context
-                                            .read<SharedBudgetDetailProvider>()
-                                            .deleteExpensePermanently(
-                                              expense.id,
-                                            ),
-                                        backgroundColor: Colors.red,
-                                        foregroundColor: Colors.white,
-                                        icon: Icons.delete_outline,
-                                        label: 'Supprimer',
-                                      ),
-                                    ],
-                                  ),
-                                  child: card,
                                 );
 
                           return Padding(
@@ -573,6 +586,39 @@ class _SharedBudgetDetailScreenState extends State<SharedBudgetDetailScreen> {
           ),
         );
       },
+    );
+  }
+}
+
+class _CircleActionIcon extends StatelessWidget {
+  final Color color;
+  final IconData icon;
+  final double maxRatio;
+
+  const _CircleActionIcon({
+    required this.color,
+    required this.icon,
+    required this.maxRatio,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final animation = Slidable.of(context)!.animation;
+    return Center(
+      child: AnimatedBuilder(
+        animation: animation,
+        builder: (context, child) {
+          final progress = (animation.value / maxRatio).clamp(0.0, 1.0);
+          final scale = 0.0001 + 0.9999 * progress;
+          return Transform.scale(scale: scale, child: child);
+        },
+        child: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          child: Icon(icon, color: Colors.white, size: 20),
+        ),
+      ),
     );
   }
 }
