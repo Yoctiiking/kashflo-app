@@ -11,7 +11,9 @@ import 'providers/budget_provider.dart';
 import 'providers/recurrence_provider.dart';
 import 'providers/user_profile_provider.dart';
 import 'providers/currency_provider.dart';
+import 'providers/app_lock_provider.dart';
 import 'routes/app_router.dart';
+import 'screens/lock/lock_screen.dart';
 
 const kBrandGreen = Color(0xFF0D2B26);
 
@@ -31,6 +33,7 @@ class KashFloApp extends StatelessWidget {
       providers: [
         // 1. AuthProvider — ne dépend de rien
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => AppLockProvider()..init()),
 
         // 2. Providers dépendant seulement de AuthProvider
         ChangeNotifierProxyProvider<AuthProvider, TransactionProvider>(
@@ -56,7 +59,11 @@ class KashFloApp extends StatelessWidget {
 
         // 3. CurrencyProvider — doit venir APRÈS UserProfileProvider,
         //    car il dépend de AuthProvider ET UserProfileProvider
-        ChangeNotifierProxyProvider2<AuthProvider, UserProfileProvider, CurrencyProvider>(
+        ChangeNotifierProxyProvider2<
+          AuthProvider,
+          UserProfileProvider,
+          CurrencyProvider
+        >(
           create: (_) => CurrencyProvider(),
           update: (_, auth, userProfile, previous) {
             final provider = previous!;
@@ -71,11 +78,20 @@ class KashFloApp extends StatelessWidget {
       ],
       child: MaterialApp.router(
         title: 'KashFlo',
-        theme: ThemeData(
-          useMaterial3: true,
-          colorSchemeSeed: kBrandGreen,
-        ),
+        theme: ThemeData(useMaterial3: true, colorSchemeSeed: kBrandGreen),
         routerConfig: AppRouter.router,
+        builder: (context, child) {
+          return Consumer2<AppLockProvider, AuthProvider>(
+            builder: (context, appLock, auth, _) {
+              final shouldLock =
+                  auth.user != null &&
+                  !appLock.isLoading &&
+                  appLock.isEnabled &&
+                  appLock.isLocked;
+              return shouldLock ? const LockScreen() : child!;
+            },
+          );
+        },
       ),
     );
   }

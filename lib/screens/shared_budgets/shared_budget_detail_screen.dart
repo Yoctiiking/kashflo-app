@@ -4,6 +4,7 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../models/shared_expense_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/currency_provider.dart';
@@ -54,9 +55,19 @@ class _SharedBudgetDetailScreenState extends State<SharedBudgetDetailScreen> {
     if (!mounted) return;
     setState(() => _isGeneratingInvite = false);
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Lien copié !')));
+    // Ancre requise pour le popover de partage (iPad / certains simulateurs).
+    final box = context.findRenderObject() as RenderBox?;
+    final origin = box != null
+        ? box.localToGlobal(Offset.zero) & box.size
+        : null;
+
+    await SharePlus.instance.share(
+      ShareParams(
+        text: 'Rejoins mon budget partagé sur KashFlo : $link',
+        subject: 'Invitation KashFlo',
+        sharePositionOrigin: origin,
+      ),
+    );
   }
 
   Future<void> _confirmRemoveMember(String uid, String name) async {
@@ -410,7 +421,7 @@ class _SharedBudgetDetailScreenState extends State<SharedBudgetDetailScreen> {
                                       strokeWidth: 2,
                                     ),
                                   )
-                                : const Text('Générer et copier le lien'),
+                                : const Text('Inviter'),
                           ),
                         ],
                       ],
