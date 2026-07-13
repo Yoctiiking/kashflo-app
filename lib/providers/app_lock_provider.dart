@@ -18,6 +18,7 @@ class AppLockProvider extends ChangeNotifier with WidgetsBindingObserver {
   bool _isEnabled = false;
   bool _isLocked = false;
   bool _canUseBiometrics = false;
+  bool _isAuthenticating = false;
 
   bool get isLoading => _isLoading;
   bool get isEnabled => _isEnabled;
@@ -45,17 +46,31 @@ class AppLockProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (!_isEnabled || _isLocked) return;
-    // On verrouille dès `inactive` (perte de focus) et pas seulement
-    // `paused` (arrière-plan) : `inactive` est l'état capturé par l'OS pour
-    // l'aperçu du multitâche/l'animation de retour. Si on attendait
-    // `paused`, ce cliché contiendrait encore le contenu de l'app, ce qui
-    // provoque un flash visible avant l'affichage de l'écran de
-    // verrouillage au retour dans l'app.
-    if (state == AppLifecycleState.inactive ||
-        state == AppLifecycleState.paused) {
+    if (!_isEnabled) return;
+
+    // `inactive` se déclenche aussi pour le centre de contrôle, le volet de
+    // notification, un appel entrant, etc. (l'app reste visible, juste sans
+    // focus) — verrouiller à ce moment-là est trop agressif.
+    // `hidden` n'est synthétisé par Flutter que juste avant `paused`, quand
+    // l'app quitte vraiment l'écran (changement d'app, bouton home) : c'est
+    // le bon signal, et il arrive assez tôt pour éviter le flash de contenu
+    // qu'on aurait avec `paused` seul (l'OS capture son instantané du
+    // multitâche à ce moment précis).
+    if (!_isLocked &&
+        (state == AppLifecycleState.hidden ||
+            state == AppLifecycleState.paused)) {
       _isLocked = true;
       notifyListeners();
+      return;
+    }
+
+    // Au retour au premier plan alors que l'app est verrouillée, on tente
+    // la biométrie directement depuis le provider plutôt que de compter sur
+    // le rebuild de l'écran de verrouillage (postFrameCallback) : ce dernier
+    // n'est pas fiable juste après un retour d'arrière-plan (aucune frame
+    // garantie immédiatement).
+    if (_isLocked && state == AppLifecycleState.resumed) {
+      unlockWithBiometrics();
     }
   }
 
@@ -88,7 +103,10 @@ class AppLockProvider extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   Future<bool> unlockWithBiometrics() async {
-    if (!_canUseBiometrics) return false;
+    // Évite un double prompt si l'écran de verrouillage et le retour au
+    // premier plan déclenchent tous les deux une tentative simultanément.
+    if (!_canUseBiometrics || _isAuthenticating) return false;
+    _isAuthenticating = true;
     try {
       final authenticated = await _localAuth.authenticate(
         localizedReason: 'Déverrouille KashFlo',
@@ -98,6 +116,8 @@ class AppLockProvider extends ChangeNotifier with WidgetsBindingObserver {
       return authenticated;
     } catch (_) {
       return false;
+    } finally {
+      _isAuthenticating = false;
     }
   }
 
