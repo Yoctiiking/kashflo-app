@@ -4,12 +4,27 @@ import '../../providers/auth_provider.dart';
 import '../../providers/currency_provider.dart';
 import '../../providers/recurrence_provider.dart';
 import '../../models/recurrence_model.dart';
+import '../../utils/amount_input_formatter.dart';
 
 const _expenseCategories = [
-  'Alimentation', 'Transport', 'Logement', 'Santé', 'Loisirs',
-  'Vêtements', 'Abonnements', 'Restaurants', 'Éducation', 'Autre',
+  'Alimentation',
+  'Transport',
+  'Logement',
+  'Santé',
+  'Loisirs',
+  'Vêtements',
+  'Abonnements',
+  'Restaurants',
+  'Éducation',
+  'Autre',
 ];
-const _incomeCategories = ['Salaire', 'Freelance', 'Investissements', 'Remboursement', 'Autre'];
+const _incomeCategories = [
+  'Salaire',
+  'Freelance',
+  'Investissements',
+  'Remboursement',
+  'Autre',
+];
 
 const _frequencies = {
   'daily': 'Quotidien',
@@ -73,9 +88,9 @@ class _AddRecurrenceSheetState extends State<AddRecurrenceSheet> {
   /// une fois que CurrencyProvider a fini de charger le taux (ready).
   void _prefillAmountIfNeeded(CurrencyProvider currency) {
     if (_amountInitialized || !_isEditing || !currency.ready) return;
-    _amountController.text = currency
-        .fromBase(widget.recurrence!.amount)
-        .toStringAsFixed(2);
+    _amountController.text = formatAmountInput(
+      currency.fromBase(widget.recurrence!.amount),
+    );
     _amountInitialized = true;
   }
 
@@ -93,7 +108,7 @@ class _AddRecurrenceSheetState extends State<AddRecurrenceSheet> {
 
     final uid = context.read<AuthProvider>().user!.uid;
     final currency = context.read<CurrencyProvider>();
-    final enteredAmount = double.parse(_amountController.text.replaceAll(',', '.'));
+    final enteredAmount = parseAmountInput(_amountController.text)!;
     final amountInBase = currency.toBase(enteredAmount);
     final customDays = _frequency == 'custom'
         ? int.tryParse(_customDaysController.text)
@@ -139,7 +154,9 @@ class _AddRecurrenceSheetState extends State<AddRecurrenceSheet> {
     _prefillAmountIfNeeded(currency);
     return Padding(
       padding: EdgeInsets.only(
-        left: 20, right: 20, top: 20,
+        left: 20,
+        right: 20,
+        top: 20,
         bottom: MediaQuery.of(context).viewInsets.bottom + 20,
       ),
       child: Form(
@@ -150,7 +167,8 @@ class _AddRecurrenceSheetState extends State<AddRecurrenceSheet> {
           children: [
             Center(
               child: Container(
-                width: 40, height: 4,
+                width: 40,
+                height: 4,
                 margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade300,
@@ -180,17 +198,25 @@ class _AddRecurrenceSheetState extends State<AddRecurrenceSheet> {
             DropdownButtonFormField<String>(
               initialValue: _category,
               decoration: const InputDecoration(labelText: 'Catégorie'),
-              items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+              items: _categories
+                  .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                  .toList(),
               onChanged: (value) => setState(() => _category = value),
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _amountController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: InputDecoration(labelText: 'Montant', prefixText: '${currency.symbol} '),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              inputFormatters: const [ThousandsSeparatorInputFormatter()],
+              decoration: InputDecoration(
+                labelText: 'Montant',
+                prefixText: '${currency.symbol} ',
+              ),
               validator: (value) {
                 if (value == null || value.isEmpty) return 'Montant requis';
-                final parsed = double.tryParse(value.replaceAll(',', '.'));
+                final parsed = parseAmountInput(value);
                 if (parsed == null || parsed <= 0) return 'Montant invalide';
                 return null;
               },
@@ -198,15 +224,21 @@ class _AddRecurrenceSheetState extends State<AddRecurrenceSheet> {
             const SizedBox(height: 16),
             TextFormField(
               controller: _labelController,
-              decoration: const InputDecoration(labelText: 'Description (ex: Spotify)'),
-              validator: (value) => (value == null || value.isEmpty) ? 'Description requise' : null,
+              decoration: const InputDecoration(
+                labelText: 'Description (ex: Spotify)',
+              ),
+              validator: (value) => (value == null || value.isEmpty)
+                  ? 'Description requise'
+                  : null,
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<String>(
               initialValue: _frequency,
               decoration: const InputDecoration(labelText: 'Fréquence'),
               items: _frequencies.entries
-                  .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
+                  .map(
+                    (e) => DropdownMenuItem(value: e.key, child: Text(e.value)),
+                  )
                   .toList(),
               onChanged: (value) => setState(() => _frequency = value!),
             ),
@@ -221,7 +253,8 @@ class _AddRecurrenceSheetState extends State<AddRecurrenceSheet> {
                 ),
                 validator: (value) {
                   if (_frequency != 'custom') return null;
-                  if (value == null || value.isEmpty) return 'Nombre de jours requis';
+                  if (value == null || value.isEmpty)
+                    return 'Nombre de jours requis';
                   final parsed = int.tryParse(value);
                   if (parsed == null || parsed <= 0) return 'Valeur invalide';
                   return null;
@@ -232,24 +265,35 @@ class _AddRecurrenceSheetState extends State<AddRecurrenceSheet> {
             InkWell(
               onTap: () async {
                 final picked = await showDatePicker(
-                  context: context, initialDate: _nextOccurrence,
-                  firstDate: DateTime(2020), lastDate: DateTime(2100),
+                  context: context,
+                  initialDate: _nextOccurrence,
+                  firstDate: DateTime(2020),
+                  lastDate: DateTime(2100),
                 );
                 if (picked != null) setState(() => _nextOccurrence = picked);
               },
               child: InputDecorator(
                 decoration: const InputDecoration(
-                  labelText: 'Prochaine date', prefixIcon: Icon(Icons.calendar_today_outlined),
+                  labelText: 'Prochaine date',
+                  prefixIcon: Icon(Icons.calendar_today_outlined),
                 ),
-                child: Text('${_nextOccurrence.day}/${_nextOccurrence.month}/${_nextOccurrence.year}'),
+                child: Text(
+                  '${_nextOccurrence.day}/${_nextOccurrence.month}/${_nextOccurrence.year}',
+                ),
               ),
             ),
             const SizedBox(height: 24),
             FilledButton(
               onPressed: _isSaving ? null : _submit,
-              style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
               child: _isSaving
-                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
                   : Text(_isEditing ? 'Sauvegarder' : 'Créer la récurrence'),
             ),
           ],

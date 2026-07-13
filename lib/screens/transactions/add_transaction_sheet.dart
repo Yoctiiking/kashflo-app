@@ -4,6 +4,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/currency_provider.dart';
 import '../../providers/transaction_provider.dart';
 import '../../models/transaction_model.dart';
+import '../../utils/amount_input_formatter.dart';
 
 const _expenseCategories = [
   'Alimentation',
@@ -73,9 +74,9 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   /// une fois que CurrencyProvider a fini de charger le taux (ready).
   void _prefillAmountIfNeeded(CurrencyProvider currency) {
     if (_amountInitialized || !_isEditing || !currency.ready) return;
-    _amountController.text = currency
-        .fromBase(widget.transaction!.amount)
-        .toStringAsFixed(2);
+    _amountController.text = formatAmountInput(
+      currency.fromBase(widget.transaction!.amount),
+    );
     _amountInitialized = true;
   }
 
@@ -93,9 +94,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
 
     final uid = context.read<AuthProvider>().user!.uid;
     final currency = context.read<CurrencyProvider>();
-    final enteredAmount = double.parse(
-      _amountController.text.replaceAll(',', '.'),
-    );
+    final enteredAmount = parseAmountInput(_amountController.text)!;
     final amountInBase = currency.toBase(enteredAmount);
 
     final provider = context.read<TransactionProvider>();
@@ -189,13 +188,14 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
+              inputFormatters: const [ThousandsSeparatorInputFormatter()],
               decoration: InputDecoration(
                 labelText: 'Montant',
                 prefixText: '${currency.symbol} ',
               ),
               validator: (value) {
                 if (value == null || value.isEmpty) return 'Montant requis';
-                final parsed = double.tryParse(value.replaceAll(',', '.'));
+                final parsed = parseAmountInput(value);
                 if (parsed == null || parsed <= 0) return 'Montant invalide';
                 return null;
               },

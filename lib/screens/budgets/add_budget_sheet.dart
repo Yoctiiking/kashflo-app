@@ -4,6 +4,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/budget_provider.dart';
 import '../../providers/currency_provider.dart';
 import '../../models/budget_model.dart';
+import '../../utils/amount_input_formatter.dart';
 
 const _expenseCategories = [
   'Alimentation',
@@ -18,11 +19,7 @@ const _expenseCategories = [
   'Autre',
 ];
 
-const _periods = {
-  'daily': 'Jour',
-  'weekly': 'Semaine',
-  'monthly': 'Mois',
-};
+const _periods = {'daily': 'Jour', 'weekly': 'Semaine', 'monthly': 'Mois'};
 
 class AddBudgetSheet extends StatefulWidget {
   /// Si fourni, le formulaire s'ouvre en mode édition pour ce budget.
@@ -62,9 +59,9 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
   /// une fois que CurrencyProvider a fini de charger le taux (ready).
   void _prefillLimitIfNeeded(CurrencyProvider currency) {
     if (_limitInitialized || !_isEditing || !currency.ready) return;
-    _limitController.text = currency
-        .fromBase(widget.budget!.limit)
-        .toStringAsFixed(2);
+    _limitController.text = formatAmountInput(
+      currency.fromBase(widget.budget!.limit),
+    );
     _limitInitialized = true;
   }
 
@@ -82,7 +79,7 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
 
     final uid = context.read<AuthProvider>().user!.uid;
     final currency = context.read<CurrencyProvider>();
-    final enteredLimit = double.parse(_limitController.text.replaceAll(',', '.'));
+    final enteredLimit = parseAmountInput(_limitController.text)!;
     final limitInBase = currency.toBase(enteredLimit);
 
     final provider = context.read<BudgetProvider>();
@@ -116,7 +113,9 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
     _prefillLimitIfNeeded(currency);
     return Padding(
       padding: EdgeInsets.only(
-        left: 20, right: 20, top: 20,
+        left: 20,
+        right: 20,
+        top: 20,
         bottom: MediaQuery.of(context).viewInsets.bottom + 20,
       ),
       child: Form(
@@ -127,7 +126,8 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
           children: [
             Center(
               child: Container(
-                width: 40, height: 4,
+                width: 40,
+                height: 4,
                 margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade300,
@@ -151,14 +151,17 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
             const SizedBox(height: 16),
             TextFormField(
               controller: _limitController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              inputFormatters: const [ThousandsSeparatorInputFormatter()],
               decoration: InputDecoration(
                 labelText: 'Limite',
                 prefixText: '${currency.symbol} ',
               ),
               validator: (value) {
                 if (value == null || value.isEmpty) return 'Limite requise';
-                final parsed = double.tryParse(value.replaceAll(',', '.'));
+                final parsed = parseAmountInput(value);
                 if (parsed == null || parsed <= 0) return 'Montant invalide';
                 return null;
               },
@@ -180,9 +183,10 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
               ),
               child: _isSaving
                   ? const SizedBox(
-                height: 20, width: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
                   : Text(_isEditing ? 'Sauvegarder' : 'Créer le budget'),
             ),
           ],

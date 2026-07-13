@@ -5,6 +5,7 @@ import '../../providers/currency_provider.dart';
 import '../../providers/shared_budget_detail_provider.dart';
 import '../../providers/user_profile_provider.dart';
 import '../../models/shared_expense_model.dart';
+import '../../utils/amount_input_formatter.dart';
 
 class AddSharedExpenseSheet extends StatefulWidget {
   final String budgetId;
@@ -50,9 +51,9 @@ class _AddSharedExpenseSheetState extends State<AddSharedExpenseSheet> {
   /// une fois que CurrencyProvider a fini de charger le taux (ready).
   void _prefillAmountIfNeeded(CurrencyProvider currency) {
     if (_initialized || !_isEditing || !currency.ready) return;
-    _amountController.text = currency
-        .fromBase(widget.expense!.amount)
-        .toStringAsFixed(2);
+    _amountController.text = formatAmountInput(
+      currency.fromBase(widget.expense!.amount),
+    );
     _initialized = true;
   }
 
@@ -61,9 +62,7 @@ class _AddSharedExpenseSheetState extends State<AddSharedExpenseSheet> {
 
     setState(() => _isSaving = true);
 
-    final enteredAmount = double.parse(
-      _amountController.text.replaceAll(',', '.'),
-    );
+    final enteredAmount = parseAmountInput(_amountController.text)!;
     final amountInBase = currency.toBase(enteredAmount);
     // On ne garde que le jour (sans l'heure) pour que le tri par date reste
     // cohérent avec les entrées créées côté web, qui n'ont pas de composante
@@ -146,13 +145,14 @@ class _AddSharedExpenseSheetState extends State<AddSharedExpenseSheet> {
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
+              inputFormatters: const [ThousandsSeparatorInputFormatter()],
               decoration: InputDecoration(
                 labelText: 'Montant',
                 prefixText: '${currency.symbol} ',
               ),
               validator: (value) {
                 if (value == null || value.isEmpty) return 'Montant requis';
-                final parsed = double.tryParse(value.replaceAll(',', '.'));
+                final parsed = parseAmountInput(value);
                 if (parsed == null || parsed <= 0) return 'Montant invalide';
                 return null;
               },

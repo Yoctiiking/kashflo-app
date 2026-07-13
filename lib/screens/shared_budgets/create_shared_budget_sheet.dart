@@ -6,6 +6,7 @@ import '../../providers/currency_provider.dart';
 import '../../providers/shared_budgets_provider.dart';
 import '../../providers/shared_budget_detail_provider.dart';
 import '../../models/shared_budget_model.dart';
+import '../../utils/amount_input_formatter.dart';
 
 const _expenseCategories = [
   'Alimentation',
@@ -65,9 +66,9 @@ class _CreateSharedBudgetSheetState extends State<CreateSharedBudgetSheet> {
   /// une fois que CurrencyProvider a fini de charger le taux (ready).
   void _prefillLimitIfNeeded(CurrencyProvider currency) {
     if (_initialized || !_isEditing || !currency.ready) return;
-    _limitController.text = currency
-        .fromBase(widget.budget!.limit)
-        .toStringAsFixed(2);
+    _limitController.text = formatAmountInput(
+      currency.fromBase(widget.budget!.limit),
+    );
     _initialized = true;
   }
 
@@ -83,9 +84,7 @@ class _CreateSharedBudgetSheetState extends State<CreateSharedBudgetSheet> {
 
     setState(() => _isSaving = true);
 
-    final enteredLimit = double.parse(
-      _limitController.text.replaceAll(',', '.'),
-    );
+    final enteredLimit = parseAmountInput(_limitController.text)!;
     final limitInBase = currency.toBase(enteredLimit);
 
     if (_isEditing) {
@@ -171,13 +170,14 @@ class _CreateSharedBudgetSheetState extends State<CreateSharedBudgetSheet> {
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
+              inputFormatters: const [ThousandsSeparatorInputFormatter()],
               decoration: InputDecoration(
                 labelText: 'Limite',
                 prefixText: '${currency.symbol} ',
               ),
               validator: (value) {
                 if (value == null || value.isEmpty) return 'Limite requise';
-                final parsed = double.tryParse(value.replaceAll(',', '.'));
+                final parsed = parseAmountInput(value);
                 if (parsed == null || parsed <= 0) return 'Montant invalide';
                 return null;
               },
