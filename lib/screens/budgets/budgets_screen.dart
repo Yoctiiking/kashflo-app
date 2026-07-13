@@ -125,70 +125,75 @@ class _BudgetCard extends StatelessWidget {
 
     final card = Card(
       margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              children: [
-                Text(
-                  budget.category,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  _periodLabel,
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text.rich(
-              TextSpan(
-                style: TextStyle(color: Colors.grey.shade700, fontSize: 14),
+      child: InkWell(
+        onTap: () => context.push('/budgets/${budget.id}'),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
                 children: [
-                  TextSpan(
-                    text: currency.formatCurrency(spent),
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: isOverBudget
-                          ? Colors.red
-                          : Theme.of(context).colorScheme.onSurface,
+                  Text(
+                    budget.category,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                  TextSpan(text: ' / ${currency.formatCurrency(budget.limit)}'),
+                  const SizedBox(width: 6),
+                  Text(
+                    _periodLabel,
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  ),
                 ],
               ),
-            ),
-            const SizedBox(height: 8),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: LinearProgressIndicator(
-                value: progress,
-                minHeight: 8,
-                backgroundColor: Colors.grey.shade200,
-                valueColor: AlwaysStoppedAnimation(
-                  isOverBudget ? Colors.red : Colors.green,
+              const SizedBox(height: 4),
+              Text.rich(
+                TextSpan(
+                  style: TextStyle(color: Colors.grey.shade700, fontSize: 14),
+                  children: [
+                    TextSpan(
+                      text: currency.formatCurrency(spent),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: isOverBudget
+                            ? Colors.red
+                            : Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                    TextSpan(
+                      text: ' / ${currency.formatCurrency(budget.limit)}',
+                    ),
+                  ],
                 ),
               ),
-            ),
-            if (isOverBudget) ...[
-              const SizedBox(height: 6),
-              Text(
-                'Dépassé de ${currency.formatCurrency(overAmount)}',
-                style: const TextStyle(
-                  color: Colors.red,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  minHeight: 8,
+                  backgroundColor: Colors.grey.shade200,
+                  valueColor: AlwaysStoppedAnimation(
+                    isOverBudget ? Colors.red : Colors.green,
+                  ),
                 ),
               ),
+              if (isOverBudget) ...[
+                const SizedBox(height: 6),
+                Text(
+                  'Dépassé de ${currency.formatCurrency(overAmount)}',
+                  style: const TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

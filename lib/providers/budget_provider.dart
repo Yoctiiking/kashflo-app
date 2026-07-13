@@ -68,15 +68,31 @@ class BudgetProvider extends ChangeNotifier {
   /// celles du mois courant), pour que budgets journaliers/hebdo restent
   /// corrects même en fin de mois.
   double spentFor(BudgetModel budget, List<TransactionModel> allTransactions) {
+    return transactionsFor(
+      budget,
+      allTransactions,
+    ).fold(0.0, (sum, t) => sum + t.amount);
+  }
+
+  /// Transactions ayant contribué au montant dépensé de ce budget sur sa
+  /// période en cours, triées de la plus récente à la plus ancienne.
+  List<TransactionModel> transactionsFor(
+    BudgetModel budget,
+    List<TransactionModel> allTransactions,
+  ) {
     final range = _periodRange(budget.period);
 
-    return allTransactions
-        .where((t) =>
-    t.type == 'expense' &&
-        t.category == budget.category &&
-        !t.date.isBefore(range.start) &&
-        t.date.isBefore(range.end))
-        .fold(0.0, (sum, t) => sum + t.amount);
+    final matching = allTransactions
+        .where(
+          (t) =>
+              t.type == 'expense' &&
+              t.category == budget.category &&
+              !t.date.isBefore(range.start) &&
+              t.date.isBefore(range.end),
+        )
+        .toList();
+    matching.sort((a, b) => b.date.compareTo(a.date));
+    return matching;
   }
 
   ({DateTime start, DateTime end}) _periodRange(String period) {
