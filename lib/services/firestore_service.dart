@@ -233,4 +233,13 @@ class FirestoreService {
   Future<void> updateUserCurrency(String uid, String currency) {
     return _db.collection('users').doc(uid).update({'currency': currency});
   }
+
+  Future<void> updateUserCategories(
+    String uid,
+    String type,
+    List<String> categories,
+  ) {
+    final field = type == 'expense' ? 'expenseCategories' : 'incomeCategories';
+    return _db.collection('users').doc(uid).update({field: categories});
+  }
 }

@@ -3,21 +3,11 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/budget_provider.dart';
 import '../../providers/currency_provider.dart';
+import '../../providers/user_profile_provider.dart';
 import '../../models/budget_model.dart';
 import '../../utils/amount_input_formatter.dart';
-
-const _expenseCategories = [
-  'Alimentation',
-  'Transport',
-  'Logement',
-  'Santé',
-  'Loisirs',
-  'Vêtements',
-  'Abonnements',
-  'Restaurants',
-  'Éducation',
-  'Autre',
-];
+import '../../utils/default_categories.dart';
+import '../../widgets/category_select.dart';
 
 const _periods = {'daily': 'Jour', 'weekly': 'Semaine', 'monthly': 'Mois'};
 
@@ -140,12 +130,14 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              initialValue: _category,
-              decoration: const InputDecoration(labelText: 'Catégorie'),
-              items: _expenseCategories
-                  .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                  .toList(),
+            CategorySelect(
+              categories:
+                  context
+                      .watch<UserProfileProvider>()
+                      .profile
+                      ?.expenseCategories ??
+                  kDefaultExpenseCategories,
+              value: _category,
               onChanged: (value) => setState(() => _category = value),
             ),
             const SizedBox(height: 16),

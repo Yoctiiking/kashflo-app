@@ -15,6 +15,7 @@ import 'providers/savings_provider.dart';
 import 'providers/theme_provider.dart';
 import 'routes/app_router.dart';
 import 'screens/lock/lock_screen.dart';
+import 'screens/lock/privacy_cover.dart';
 
 const kBrandGreen = Color(0xFF0D2B26);
 
@@ -101,12 +102,14 @@ class KashFloApp extends StatelessWidget {
             builder: (context, child) {
               return Consumer2<AppLockProvider, AuthProvider>(
                 builder: (context, appLock, auth, _) {
-                  final shouldLock =
-                      auth.user != null &&
-                      !appLock.isLoading &&
-                      appLock.isEnabled &&
-                      appLock.isLocked;
-                  return shouldLock ? const LockScreen() : child!;
+                  final lockActive = auth.user != null && appLock.isEnabled;
+                  if (lockActive && !appLock.isLoading && appLock.isLocked) {
+                    return const LockScreen();
+                  }
+                  if (lockActive && appLock.showPrivacyCover) {
+                    return const PrivacyCover();
+                  }
+                  return child!;
                 },
               );
             },

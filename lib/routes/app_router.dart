@@ -8,6 +8,7 @@ import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
 import '../screens/budgets/budget_detail_screen.dart';
 import '../screens/dashboard/dashboard_screen.dart';
+import '../screens/settings/categories_screen.dart';
 import '../screens/recurrences/recurrences_screen.dart';
 import '../screens/savings/savings_screen.dart';
 import '../screens/settings/settings_screen.dart';
@@ -55,6 +56,10 @@ class AppRouter {
       GoRoute(
         path: '/settings',
         builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/settings/categories',
+        builder: (context, state) => const CategoriesScreen(),
       ),
       GoRoute(
         path: '/budgets/:id',

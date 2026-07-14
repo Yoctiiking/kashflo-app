@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../providers/app_lock_provider.dart';
 import '../../providers/auth_provider.dart';
@@ -106,6 +107,16 @@ class SettingsScreen extends StatelessWidget {
                   ),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => _showCurrencyPicker(context, profile.currency),
+                ),
+              ),
+              const SizedBox(height: 24),
+              _SectionHeader('Catégories'),
+              Card(
+                child: ListTile(
+                  leading: const Icon(Icons.category_outlined),
+                  title: const Text('Gérer les catégories'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => context.push('/settings/categories'),
                 ),
               ),
               const SizedBox(height: 24),

@@ -46,6 +46,14 @@ class UserProfileProvider extends ChangeNotifier {
     return _service.updateUserCurrency(uid, currency);
   }
 
+  Future<void> updateCategories(
+    String uid,
+    String type,
+    List<String> categories,
+  ) {
+    return _service.updateUserCategories(uid, type, categories);
+  }
+
   @override
   void dispose() {
     _subscription?.cancel();

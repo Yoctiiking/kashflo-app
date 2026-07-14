@@ -5,21 +5,11 @@ import '../../providers/auth_provider.dart';
 import '../../providers/currency_provider.dart';
 import '../../providers/shared_budgets_provider.dart';
 import '../../providers/shared_budget_detail_provider.dart';
+import '../../providers/user_profile_provider.dart';
 import '../../models/shared_budget_model.dart';
 import '../../utils/amount_input_formatter.dart';
-
-const _expenseCategories = [
-  'Alimentation',
-  'Transport',
-  'Logement',
-  'Santé',
-  'Loisirs',
-  'Vêtements',
-  'Abonnements',
-  'Restaurants',
-  'Éducation',
-  'Autre',
-];
+import '../../utils/default_categories.dart';
+import '../../widgets/category_select.dart';
 
 const _periods = {'daily': 'Jour', 'weekly': 'Semaine', 'monthly': 'Mois'};
 
@@ -84,6 +74,7 @@ class _CreateSharedBudgetSheetState extends State<CreateSharedBudgetSheet> {
 
     setState(() => _isSaving = true);
 
+    final uid = context.read<AuthProvider>().user!.uid;
     final enteredLimit = parseAmountInput(_limitController.text)!;
     final limitInBase = currency.toBase(enteredLimit);
 
@@ -97,7 +88,6 @@ class _CreateSharedBudgetSheetState extends State<CreateSharedBudgetSheet> {
       if (!mounted) return;
       Navigator.pop(context);
     } else {
-      final uid = context.read<AuthProvider>().user!.uid;
       final budgetId = await context
           .read<SharedBudgetsProvider>()
           .createSharedBudget(
@@ -156,12 +146,14 @@ class _CreateSharedBudgetSheetState extends State<CreateSharedBudgetSheet> {
                   (value == null || value.isEmpty) ? 'Nom requis' : null,
             ),
             const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              initialValue: _category,
-              decoration: const InputDecoration(labelText: 'Catégorie'),
-              items: _expenseCategories
-                  .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                  .toList(),
+            CategorySelect(
+              categories:
+                  context
+                      .watch<UserProfileProvider>()
+                      .profile
+                      ?.expenseCategories ??
+                  kDefaultExpenseCategories,
+              value: _category,
               onChanged: (value) => setState(() => _category = value),
             ),
             const SizedBox(height: 16),

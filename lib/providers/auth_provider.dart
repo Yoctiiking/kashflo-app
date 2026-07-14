@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../utils/default_categories.dart';
 
 class AuthProvider extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -26,7 +27,11 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<String?> register(String email, String password, String displayName) async {
+  Future<String?> register(
+    String email,
+    String password,
+    String displayName,
+  ) async {
     try {
       final cred = await _auth.createUserWithEmailAndPassword(
         email: email,
@@ -36,6 +41,8 @@ class AuthProvider extends ChangeNotifier {
         'displayName': displayName,
         'email': email,
         'currency': 'CAD',
+        'expenseCategories': kDefaultExpenseCategories,
+        'incomeCategories': kDefaultIncomeCategories,
         'createdAt': FieldValue.serverTimestamp(),
       });
       return null;

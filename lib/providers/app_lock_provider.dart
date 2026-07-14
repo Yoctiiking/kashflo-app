@@ -19,11 +19,21 @@ class AppLockProvider extends ChangeNotifier with WidgetsBindingObserver {
   bool _isLocked = false;
   bool _canUseBiometrics = false;
   bool _isAuthenticating = false;
+  bool _showPrivacyCover = false;
 
   bool get isLoading => _isLoading;
   bool get isEnabled => _isEnabled;
   bool get isLocked => _isLocked;
   bool get canUseBiometrics => _canUseBiometrics;
+
+  /// Cache visuellement le contenu (sans exiger de déverrouillage) dès que
+  /// l'app perd le focus (`inactive`), pour éviter que l'instantané pris par
+  /// l'OS pour l'aperçu du multitâche/l'animation de retour ne contienne des
+  /// données sensibles. Contrairement à [isLocked], ce cache n'implique pas
+  /// forcément une demande de code : il disparaît immédiatement si l'app
+  /// revient au premier plan sans être vraiment passée en arrière-plan
+  /// (centre de contrôle, volet de notification…).
+  bool get showPrivacyCover => _showPrivacyCover;
 
   Future<void> init() async {
     WidgetsBinding.instance.addObserver(this);
@@ -48,29 +58,41 @@ class AppLockProvider extends ChangeNotifier with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (!_isEnabled) return;
 
-    // `inactive` se déclenche aussi pour le centre de contrôle, le volet de
-    // notification, un appel entrant, etc. (l'app reste visible, juste sans
-    // focus) — verrouiller à ce moment-là est trop agressif.
-    // `hidden` n'est synthétisé par Flutter que juste avant `paused`, quand
-    // l'app quitte vraiment l'écran (changement d'app, bouton home) : c'est
-    // le bon signal, et il arrive assez tôt pour éviter le flash de contenu
-    // qu'on aurait avec `paused` seul (l'OS capture son instantané du
-    // multitâche à ce moment précis).
-    if (!_isLocked &&
-        (state == AppLifecycleState.hidden ||
-            state == AppLifecycleState.paused)) {
-      _isLocked = true;
-      notifyListeners();
-      return;
-    }
+    switch (state) {
+      // L'OS prend son instantané (aperçu du multitâche / animation de
+      // retour) au moment de `inactive`, pas plus tard. On cache donc le
+      // contenu dès cet instant — mais sans verrouiller : `inactive` se
+      // déclenche aussi pour le centre de contrôle, le volet de
+      // notification, un appel entrant, etc., où l'app reste au premier
+      // plan et où exiger le code serait intempestif.
+      case AppLifecycleState.inactive:
+        _showPrivacyCover = true;
+        notifyListeners();
 
-    // Au retour au premier plan alors que l'app est verrouillée, on tente
-    // la biométrie directement depuis le provider plutôt que de compter sur
-    // le rebuild de l'écran de verrouillage (postFrameCallback) : ce dernier
-    // n'est pas fiable juste après un retour d'arrière-plan (aucune frame
-    // garantie immédiatement).
-    if (_isLocked && state == AppLifecycleState.resumed) {
-      unlockWithBiometrics();
+      // `hidden` n'est synthétisé par Flutter que juste avant `paused`,
+      // quand l'app quitte vraiment l'écran (changement d'app, bouton
+      // home) : c'est le bon signal pour exiger un déverrouillage.
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.paused:
+        if (!_isLocked) {
+          _isLocked = true;
+          notifyListeners();
+        }
+
+      case AppLifecycleState.resumed:
+        _showPrivacyCover = false;
+        // Tente la biométrie directement depuis le provider plutôt que de
+        // compter sur le rebuild de l'écran de verrouillage
+        // (postFrameCallback) : ce dernier n'est pas fiable juste après un
+        // retour d'arrière-plan (aucune frame garantie immédiatement).
+        if (_isLocked) {
+          unlockWithBiometrics();
+        } else {
+          notifyListeners();
+        }
+
+      case AppLifecycleState.detached:
+        break;
     }
   }
 

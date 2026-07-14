@@ -3,28 +3,11 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/currency_provider.dart';
 import '../../providers/transaction_provider.dart';
+import '../../providers/user_profile_provider.dart';
 import '../../models/transaction_model.dart';
 import '../../utils/amount_input_formatter.dart';
-
-const _expenseCategories = [
-  'Alimentation',
-  'Transport',
-  'Logement',
-  'Santé',
-  'Loisirs',
-  'Vêtements',
-  'Abonnements',
-  'Restaurants',
-  'Éducation',
-  'Autre',
-];
-const _incomeCategories = [
-  'Salaire',
-  'Freelance',
-  'Investissements',
-  'Remboursement',
-  'Autre',
-];
+import '../../utils/default_categories.dart';
+import '../../widgets/category_select.dart';
 
 class AddTransactionSheet extends StatefulWidget {
   /// Si fournie, le formulaire s'ouvre en mode édition pour cette transaction.
@@ -66,9 +49,6 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
     _labelController.dispose();
     super.dispose();
   }
-
-  List<String> get _categories =>
-      _type == 'expense' ? _expenseCategories : _incomeCategories;
 
   /// Pré-remplit le montant converti dans la devise d'affichage,
   /// une fois que CurrencyProvider a fini de charger le taux (ready).
@@ -174,12 +154,15 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
               },
             ),
             const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              initialValue: _category,
-              decoration: const InputDecoration(labelText: 'Catégorie'),
-              items: _categories
-                  .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                  .toList(),
+            CategorySelect(
+              categories:
+                  context.watch<UserProfileProvider>().profile?.categoriesFor(
+                    _type,
+                  ) ??
+                  (_type == 'expense'
+                      ? kDefaultExpenseCategories
+                      : kDefaultIncomeCategories),
+              value: _category,
               onChanged: (value) => setState(() => _category = value),
             ),
             const SizedBox(height: 16),
